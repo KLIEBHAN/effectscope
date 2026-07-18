@@ -160,5 +160,9 @@ describe("EffectScope diagnosis workspace", () => {
 
     expect(screen.getByText("Invariant violated")).toBeInTheDocument();
     expect(screen.getByText("Failed")).toBeInTheDocument();
+    expect(screen.getByRole("listitem", { current: "step" })).toHaveTextContent("Repair");
+
+    choose(/Abort and guard obsolete requests/i);
+    expect(screen.getByRole("listitem", { current: "step" })).toHaveTextContent("Prove");
   });
 });

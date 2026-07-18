@@ -63,6 +63,7 @@ test("both distractors fail their deterministic invariant", async ({ page }) => 
   await choose(page, "Add a loading indicator");
   await page.getByRole("button", { name: "Test selected repair" }).click();
   await expect(page.getByText("Invariant violated", { exact: true })).toBeVisible();
+  await expect(page.locator('.loop-strip [aria-current="step"]')).toContainText("Repair");
 
   await page.getByRole("button", { name: "Missing cleanup" }).click();
   await choose(page, "Old and replacement timers both run");

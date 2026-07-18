@@ -324,7 +324,15 @@ export default function App() {
     { label: "Predict", done: predictionId !== null },
     { label: "Run", done: events.length > 0 },
     { label: "Observe", done: terminalEvent !== undefined },
-    { label: "Repair", done: repairId !== null },
+    {
+      label: "Repair",
+      done:
+        repairId !== null &&
+        !(
+          stage === "repair" &&
+          selectedRepair?.variantId === executedVariantId
+        ),
+    },
     { label: "Prove", done: stage === "proved" },
   ];
   const currentLoopStep = loopSteps.findIndex((step) => !step.done);
