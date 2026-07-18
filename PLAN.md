@@ -44,7 +44,8 @@ Nach einer Sitzung kann Lernender bei mindestens einem Szenario:
 
 Vorhandene Basis:
 
-- Quelle: `local imported useEffect Lab source`
+- Quelle: lokal importierter useEffect-Lab-Snapshot; ursprünglicher
+  Dateisystempfad für Veröffentlichung entfernt
 - React 19, TypeScript, Vite, Framer Motion
 - sieben funktionierende deutschsprachige Lektionen
 - wiederverwendbare Komponenten: `CodeBlock`, `EffectLog`, `LessonLayout`

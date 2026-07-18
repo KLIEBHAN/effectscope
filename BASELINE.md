@@ -1,7 +1,8 @@
 # Build Week baseline
 
 Captured: 2026-07-18  
-Source: `local imported useEffect Lab source`
+Source: locally imported useEffect Lab snapshot; original filesystem location
+omitted from the public record
 
 ## Imported state
 
