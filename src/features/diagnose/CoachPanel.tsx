@@ -71,8 +71,43 @@ export function CoachPanel({
           ref={verdictRef}
           tabIndex={-1}
         >
+          <div className="verdict__outcomes" aria-label="Attempt outcome summary">
+            {predictionLabel ? (
+              <p className={`outcome-status outcome-status--${predictionAssessment}`}>
+                <span className="outcome-status__icon" aria-hidden>
+                  {predictionAssessment === "matched"
+                    ? "✓"
+                    : predictionAssessment === "missed"
+                      ? "×"
+                      : "?"}
+                </span>
+                <span>
+                  <small>Prediction result</small>
+                  <strong>
+                    {predictionAssessment === "matched"
+                      ? "Your prediction matched the observed bug trace."
+                      : predictionAssessment === "missed"
+                        ? "Your prediction missed the observed bug trace."
+                        : "Prediction could not be assessed from this incomplete trace."}
+                  </strong>
+                </span>
+              </p>
+            ) : null}
+            <p className={passed
+              ? "outcome-status outcome-status--runtime-pass"
+              : "outcome-status outcome-status--runtime-fail"}
+            >
+              <span className="outcome-status__icon" aria-hidden>{passed ? "✓" : "!"}</span>
+              <span>
+                <small>Runtime result</small>
+                <strong>{passed ? "Repair proved" : "Bug reproduced"}</strong>
+              </span>
+            </p>
+          </div>
           <p className="verdict__label">Deterministic verdict</p>
-          <strong>{passed ? "Invariant proved" : "Invariant violated"}</strong>
+          <strong className="verdict__runtime-title">
+            {passed ? "Invariant proved" : "Invariant violated"}
+          </strong>
           <p>{terminal.message}</p>
           {predictionLabel ? (
             <dl className="prediction-feedback">
@@ -83,16 +118,6 @@ export function CoachPanel({
               <div>
                 <dt>Actual bug behavior</dt>
                 <dd>{actualBugOutcome}</dd>
-              </div>
-              <div>
-                <dt>Assessment</dt>
-                <dd>
-                  {predictionAssessment === "matched"
-                    ? "Your prediction matched the observed bug trace."
-                    : predictionAssessment === "missed"
-                      ? "Your prediction missed the observed bug trace."
-                      : "Prediction could not be assessed from this incomplete trace."}
-                </dd>
               </div>
               <div>
                 <dt>Variant under test</dt>

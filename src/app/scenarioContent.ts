@@ -38,7 +38,7 @@ export const scenarioContent: {
     shortTitle: "Fetch race",
     eyebrow: "Async ordering",
     problem:
-      "A slow request for Todo B starts first. Todo C is selected immediately after, and its faster response arrives first.",
+      "The situation: A slow request for Todo B starts first. Todo C is selected immediately after, and its faster response arrives first.",
     invariant: "Only the latest selected request may write visible state.",
     interaction: "B slow · C fast · 1.2 s controlled run",
     predictions: [
@@ -85,7 +85,7 @@ export const scenarioContent: {
     shortTitle: "Missing cleanup",
     eyebrow: "Resource lifetime",
     problem:
-      "A component starts an interval, unmounts, then mounts a replacement. The first interval was never cleared.",
+      "The situation: A component starts an interval, unmounts, then mounts a replacement. The first interval was never cleared.",
     invariant: "Unmounted instances must leave no active timers behind.",
     interaction: "Mount · tick · unmount · remount · tick",
     predictions: [

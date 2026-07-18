@@ -15,6 +15,8 @@ test("diagnoses and repairs Fetch Race from prediction to proof", async ({ page 
   await runBug(page);
 
   await expect(page.getByText("Your prediction matched the observed bug trace.")).toBeVisible();
+  await expect(page.getByText("Bug reproduced", { exact: true })).toBeVisible();
+  await expect(page.locator(".outcome-status--matched")).toHaveCSS("color", "rgb(185, 246, 93)");
   await choose(page, "Abort and guard obsolete requests");
   await expect(page.getByRole("region", { name: "Source under test" })).toContainText(
     "No request cleanup",

@@ -815,13 +815,64 @@
 .verdict {
   margin: 16px;
   padding: 17px;
-  border: 1px solid var(--line);
-  border-left-width: 3px;
+  border: 1px solid var(--line-bright);
   background: var(--ink-2);
 }
 
-.verdict--pass { border-left-color: var(--accent); }
-.verdict--fail { border-left-color: var(--danger); }
+.verdict__outcomes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 22px;
+  margin: 0 0 16px;
+  padding: 0 0 15px;
+  border-bottom: 1px solid var(--line);
+}
+
+.outcome-status {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  margin: 0;
+}
+
+.outcome-status__icon {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 1px solid currentColor;
+  font: 600 0.7rem/1 var(--font-mono);
+}
+
+.outcome-status small {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font: 500 0.56rem/1 var(--font-mono);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.outcome-status strong {
+  display: block;
+  color: currentColor;
+  font: 600 0.73rem/1.35 var(--font-body);
+}
+
+.outcome-status--matched,
+.outcome-status--runtime-pass {
+  color: var(--accent);
+}
+
+.outcome-status--missed,
+.outcome-status--runtime-fail {
+  color: var(--danger);
+}
+
+.outcome-status--indeterminate {
+  color: var(--warn);
+}
 
 .verdict__label {
   margin: 0 0 7px;
@@ -831,12 +882,13 @@
   text-transform: uppercase;
 }
 
-.verdict strong {
+.verdict__runtime-title {
+  display: block;
   font: 600 1.05rem/1.2 var(--font-display);
 }
 
-.verdict--pass strong { color: var(--accent); }
-.verdict--fail strong { color: var(--danger); }
+.verdict--pass .verdict__runtime-title { color: var(--accent); }
+.verdict--fail .verdict__runtime-title { color: var(--danger); }
 
 .verdict > p:last-child {
   margin: 9px 0 0;
@@ -1138,6 +1190,10 @@
   .prediction-feedback div {
     grid-template-columns: 1fr;
     gap: 3px;
+  }
+
+  .verdict__outcomes {
+    grid-template-columns: 1fr;
   }
 
   .run-actions,

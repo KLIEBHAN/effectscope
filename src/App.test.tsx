@@ -34,6 +34,15 @@ describe("EffectScope diagnosis workspace", () => {
     );
     expect(screen.getByRole("button", { name: "Run bug sequence" })).toBeDisabled();
     expect(screen.getByText("Needs prediction")).toBeInTheDocument();
+    expect(screen.getByText(
+      "The situation: A slow request for Todo B starts first. Todo C is selected immediately after, and its faster response arrives first.",
+    )).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Missing cleanup/i }));
+    expect(screen.getByText(
+      "The situation: A component starts an interval, unmounts, then mounts a replacement. The first interval was never cleared.",
+    )).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Fetch race/i }));
 
     choose(/Only Todo C remains visible/i);
 
@@ -51,6 +60,7 @@ describe("EffectScope diagnosis workspace", () => {
     await advance(2_000);
 
     expect(screen.getByText("Invariant violated")).toBeInTheDocument();
+    expect(screen.getByText("Bug reproduced")).toBeInTheDocument();
     expect(screen.getByText(/Stale request B overwrote/i)).toBeInTheDocument();
     expect(screen.getByText("Your prediction missed the observed bug trace.")).toBeInTheDocument();
     expect(screen.getByText(/Todo C appears first.*Todo B response then overwrites/i)).toBeInTheDocument();
@@ -95,6 +105,7 @@ describe("EffectScope diagnosis workspace", () => {
     await advance(5_000);
 
     expect(screen.getByText("Invariant violated")).toBeInTheDocument();
+    expect(screen.getByText("Bug reproduced")).toBeInTheDocument();
     expect(screen.getByText("Your prediction matched the observed bug trace.")).toBeInTheDocument();
     expect(screen.queryByText("Component unmounted")).not.toBeInTheDocument();
     expect(screen.queryByText("instance-2 committed as unmounted.")).not.toBeInTheDocument();
