@@ -73,6 +73,31 @@ test("both distractors fail their deterministic invariant", async ({ page }) => 
   await expect(page.getByText("Invariant violated", { exact: true })).toBeVisible();
 });
 
+test("keyboard execution exposes visible focus at failure and proof", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("radio", { name: /Todo C appears, then B overwrites it/i }).focus();
+  await page.keyboard.press("Space");
+  await page.getByRole("button", { name: "Run bug sequence" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Invariant violated", { exact: true })).toBeVisible();
+
+  const repairHeading = page.getByRole("heading", { name: "Choose the smallest repair" });
+  await expect(repairHeading).toBeFocused();
+  await expect(repairHeading).toHaveCSS("outline-style", "solid");
+  await expect(repairHeading).toHaveCSS("outline-width", "2px");
+
+  await page.getByRole("radio", { name: /Abort and guard obsolete requests/i }).focus();
+  await page.keyboard.press("Space");
+  await page.getByRole("button", { name: "Test selected repair" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Invariant proved", { exact: true })).toBeVisible();
+
+  const verdict = page.locator(".verdict");
+  await expect(verdict).toBeFocused();
+  await expect(verdict).toHaveCSS("outline-style", "solid");
+  await expect(verdict).toHaveCSS("outline-width", "2px");
+});
+
 test("mobile learning loop keeps all five steps in viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");

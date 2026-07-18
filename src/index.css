@@ -77,7 +77,8 @@ button {
 
 button:focus-visible,
 a:focus-visible,
-pre:focus-visible {
+pre:focus-visible,
+[tabindex="-1"]:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 3px;
 }
