@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
-import { scenarioContent } from "../src/app/scenarioContent";
+import { scenarioContent } from "../src/app/scenarioContent.js";
 import {
   analyzeAttemptResponseSchema,
   analyzeAttemptRequestSchema,
@@ -8,9 +8,9 @@ import {
   validateFeedbackEvidence,
   type AnalyzeAttemptRequest,
   type CoachFeedback,
-} from "../src/infrastructure/feedbackSchema";
-import { fetchRaceVariants } from "../src/scenarios/fetch-race/variants";
-import { missingCleanupVariants } from "../src/scenarios/missing-cleanup/variants";
+} from "../src/infrastructure/feedbackSchema.js";
+import { fetchRaceVariants } from "../src/scenarios/fetch-race/variants.js";
+import { missingCleanupVariants } from "../src/scenarios/missing-cleanup/variants.js";
 
 const maxBodyBytes = 12 * 1_024;
 const defaultModel = "gpt-5.6-terra";

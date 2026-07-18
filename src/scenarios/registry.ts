@@ -1,12 +1,12 @@
-import type { ScenarioId } from "../domain/trace";
+import type { ScenarioId } from "../domain/trace.js";
 import {
   fetchRaceVariantIds,
   type FetchRaceVariantId,
-} from "./fetch-race/variants";
+} from "./fetch-race/variants.js";
 import {
   missingCleanupVariantIds,
   type MissingCleanupVariantId,
-} from "./missing-cleanup/variants";
+} from "./missing-cleanup/variants.js";
 
 export type ScenarioVariantMap = {
   "fetch-race": FetchRaceVariantId;

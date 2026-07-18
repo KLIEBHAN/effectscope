@@ -1,7 +1,7 @@
 import type {
   AnalyzeAttemptRequest,
   CoachFeedback,
-} from "../infrastructure/feedbackSchema";
+} from "../infrastructure/feedbackSchema.js";
 
 export function makeFetchBugRequest(): AnalyzeAttemptRequest {
   const rawEvents = [

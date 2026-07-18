@@ -1,5 +1,5 @@
-import type { ScenarioId } from "../domain/trace";
-import type { ScenarioVariantMap } from "../scenarios/registry";
+import type { ScenarioId } from "../domain/trace.js";
+import type { ScenarioVariantMap } from "../scenarios/registry.js";
 
 export type Choice = {
   id: string;

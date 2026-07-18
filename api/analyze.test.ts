@@ -2,13 +2,13 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { zodTextFormat } from "openai/helpers/zod";
-import { coachFeedbackSchema } from "../src/infrastructure/feedbackSchema";
+import { coachFeedbackSchema } from "../src/infrastructure/feedbackSchema.js";
 import {
   makeCoachFeedback,
   makeFetchBugRequest,
   makeMissingCleanupBugRequest,
-} from "../src/test/analysisFixture";
-import endpoint, { buildModelContext, createAnalyzeHandler } from "./analyze";
+} from "../src/test/analysisFixture.js";
+import endpoint, { buildModelContext, createAnalyzeHandler } from "./analyze.js";
 
 function request(body: unknown, headers?: HeadersInit, signal?: AbortSignal) {
   return new Request("https://effectscope.test/api/analyze", {

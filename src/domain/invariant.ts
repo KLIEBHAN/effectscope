@@ -1,4 +1,4 @@
-import type { InvariantEvaluator, InvariantState, TraceEvent } from "./trace";
+import type { InvariantEvaluator, InvariantState, TraceEvent } from "./trace.js";
 
 const pending = (id: string, message: string): InvariantState => ({
   status: "pending",

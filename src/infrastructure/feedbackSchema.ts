@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { evaluateFetchRace, evaluateMissingCleanup } from "../domain/invariant";
-import type { TraceEvent } from "../domain/trace";
-import { scenarioContent } from "../app/scenarioContent";
+import { evaluateFetchRace, evaluateMissingCleanup } from "../domain/invariant.js";
+import type { TraceEvent } from "../domain/trace.js";
+import { scenarioContent } from "../app/scenarioContent.js";
 import {
   isScenarioVariantIdFor,
   scenarioVariantIds,
-} from "../scenarios/registry";
+} from "../scenarios/registry.js";
 
 const traceEventKinds = [
   "render",
