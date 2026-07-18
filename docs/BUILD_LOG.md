@@ -337,3 +337,40 @@ Remediation commit: `c1a55be`
 Final Milestone 3 verdict: PASS from all three reviewers. No P0, P1, or P2
 findings remained. Post-remediation evidence: 83 tests, ten Chromium E2E flows,
 lint, build, and diff checks passed.
+
+## 2026-07-18 — Milestone 4: release and submission readiness
+
+- Rebuilt the README around the one-minute test path, deterministic/model trust
+  boundary, architecture, GPT-5.6 usage, Codex workflow, clean setup, deployment,
+  privacy, and Build Week delta.
+- Added architecture, dependency/license inventory, Devpost draft,
+  sub-three-minute demo script, and explicit human/external submission checklist.
+- Added inspected 1440 px desktop and 390 px mobile screenshots with mocked,
+  schema-valid coaching; no mock output is represented as a live production call.
+- Added a Chromium GPT-5.6 coaching path for Missing Cleanup, including request
+  scenario ownership and evidence focus.
+- Removed the unused Framer Motion runtime and its three transitive packages.
+
+Artifact commit: `b9062c4`
+
+Fresh-checkout release proof:
+
+```text
+git clone --local --no-hardlinks -> clean clone
+npm ci --engine-strict -> 126 packages, 0 vulnerabilities
+npm run check -> 14 test files, 83 tests; lint and production build passed
+npx playwright install chromium -> passed
+npm run test:e2e -> 11 Chromium tests passed
+npm audit --audit-level=high -> 0 vulnerabilities
+git diff --check -> passed
+git status --short -> clean
+```
+
+Tracked-file and Git-history scans found no API key or common GitHub/Vercel token
+pattern. Only `.env.example` is tracked, with an empty key value.
+
+External release gates remain deliberately open: this environment has no OpenAI
+API key, and Vercel CLI 56.3.1 could not build without a valid project login.
+Therefore no live-model claim, public deployment, YouTube upload, Devpost
+submission, or `/feedback` submission ID is fabricated. Exact human actions are
+listed in `docs/SUBMISSION_CHECKLIST.md`.

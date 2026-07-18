@@ -29,8 +29,8 @@ npm audit --audit-level=high
 git diff --check
 ```
 
-- [ ] All commands pass at release commit
-- [ ] Repository contains no `.env`, API key, token, personal data, or private URL
+- [x] All commands pass at release commit `b9062c4` in a fresh local clone
+- [x] Repository contains no `.env`, API key, token, personal data, or private URL
 - [ ] GitHub Actions passes on public/default branch
 
 ## Live deployment
