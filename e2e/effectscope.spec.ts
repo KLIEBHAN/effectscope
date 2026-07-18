@@ -86,6 +86,8 @@ test("both distractors fail their deterministic invariant", async ({ page }) => 
   await expect(page.getByText("Running", { exact: true })).toBeVisible();
   await expect(page.getByText("Rejected", { exact: true })).toBeVisible();
   await expect(page.getByText("Invariant violated", { exact: true })).toBeVisible();
+  await expect(page.getByText("Component unmounted", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("instance-2 committed as unmounted.", { exact: true })).toHaveCount(0);
 });
 
 test("keyboard execution exposes visible focus at failure and proof", async ({ page }) => {
