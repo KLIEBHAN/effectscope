@@ -5,6 +5,18 @@ export type PredictionFeedback = Readonly<{
   correctPredictionId: string | null;
 }>;
 
+export type PredictionAssessment = "matched" | "missed" | "indeterminate";
+
+export function assessPrediction(
+  predictionId: string | null,
+  feedback: PredictionFeedback,
+): PredictionAssessment {
+  if (!predictionId || feedback.correctPredictionId === null) {
+    return "indeterminate";
+  }
+  return predictionId === feedback.correctPredictionId ? "matched" : "missed";
+}
+
 export function derivePredictionFeedback(
   scenarioId: ScenarioId,
   events: readonly TraceEvent[],

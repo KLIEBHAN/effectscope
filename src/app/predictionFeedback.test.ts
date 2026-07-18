@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TraceEvent, TraceEventKind } from "../domain/trace";
-import { derivePredictionFeedback } from "./predictionFeedback";
+import { assessPrediction, derivePredictionFeedback } from "./predictionFeedback";
 
 function event(
   sequence: number,
@@ -32,6 +32,8 @@ describe("derivePredictionFeedback", () => {
     expect(observed.actualOutcome).toContain("Todo C appears first");
     expect(incomplete.correctPredictionId).toBeNull();
     expect(incomplete.actualOutcome).toContain("not observed");
+    expect(assessPrediction("stale-overwrite", observed)).toBe("matched");
+    expect(assessPrediction("stale-overwrite", incomplete)).toBe("indeterminate");
   });
 
   it("matches Missing Cleanup only after both timer generations tick", () => {
@@ -47,5 +49,6 @@ describe("derivePredictionFeedback", () => {
     expect(observed.actualOutcome).toContain("survives unmount");
     expect(incomplete.correctPredictionId).toBeNull();
     expect(incomplete.actualOutcome).toContain("not observed");
+    expect(assessPrediction("one-timer", observed)).toBe("missed");
   });
 });

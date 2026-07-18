@@ -1,11 +1,12 @@
 import type { RefObject } from "react";
+import type { PredictionAssessment } from "../../app/predictionFeedback";
 import type { TraceEvent } from "../../domain/trace";
 
 type CoachPanelProps = {
   actualBugOutcome: string;
   events: readonly TraceEvent[];
   executedVariantLabel: string;
-  predictionCorrect: boolean;
+  predictionAssessment: PredictionAssessment;
   predictionLabel: string | null;
   verdictRef: RefObject<HTMLDivElement | null>;
 };
@@ -14,7 +15,7 @@ export function CoachPanel({
   actualBugOutcome,
   events,
   executedVariantLabel,
-  predictionCorrect,
+  predictionAssessment,
   predictionLabel,
   verdictRef,
 }: CoachPanelProps) {
@@ -55,9 +56,11 @@ export function CoachPanel({
               <div>
                 <dt>Assessment</dt>
                 <dd>
-                  {predictionCorrect
+                  {predictionAssessment === "matched"
                     ? "Your prediction matched the observed bug trace."
-                    : "Your prediction missed the observed bug trace."}
+                    : predictionAssessment === "missed"
+                      ? "Your prediction missed the observed bug trace."
+                      : "Prediction could not be assessed from this incomplete trace."}
                 </dd>
               </div>
               <div>

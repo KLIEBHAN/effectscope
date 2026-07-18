@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import {
+  assessPrediction,
   derivePredictionFeedback,
   type PredictionFeedback,
 } from "./app/predictionFeedback";
@@ -346,9 +347,13 @@ export default function App() {
     stage === "repair" && selectedRepair?.variantId === executedVariantId;
   const selectedRepairVerified =
     stage === "proved" && selectedRepair?.variantId === executedVariantId;
-  const predictionCorrect = bugObservation
-    ? predictionId === bugObservation.correctPredictionId
-    : predictionId === content.correctPredictionId;
+  const predictionAssessment = assessPrediction(
+    predictionId,
+    bugObservation ?? {
+      actualOutcome: content.actualBugOutcome,
+      correctPredictionId: content.correctPredictionId,
+    },
+  );
   const runStatus = running
     ? "Running"
     : stage === "predict"
@@ -562,7 +567,7 @@ export default function App() {
                 actualBugOutcome={bugObservation?.actualOutcome ?? content.actualBugOutcome}
                 events={events}
                 executedVariantLabel={sourceVariant.label}
-                predictionCorrect={predictionCorrect}
+                predictionAssessment={predictionAssessment}
                 predictionLabel={selectedPrediction?.label ?? null}
                 verdictRef={verdictRef}
               />
