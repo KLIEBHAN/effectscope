@@ -10,6 +10,8 @@ export type FetchRaceVariant = {
   id: FetchRaceVariantId;
   label: string;
   abortOnCleanup: boolean;
+  guardsCommittedGeneration: boolean;
+  hasLoadingIndicator: boolean;
   source: string;
 };
 
@@ -18,6 +20,8 @@ export const fetchRaceVariants: Record<FetchRaceVariantId, FetchRaceVariant> = {
     id: "fetch-race/bug-v1",
     label: "No request cleanup",
     abortOnCleanup: false,
+    guardsCommittedGeneration: false,
+    hasLoadingIndicator: false,
     source: `useEffect(() => {
   loadTodo(todoId).then(setTodo);
 }, [todoId]);`,
@@ -26,10 +30,26 @@ export const fetchRaceVariants: Record<FetchRaceVariantId, FetchRaceVariant> = {
     id: "fetch-race/fix-abort-v1",
     label: "Abort stale request in cleanup",
     abortOnCleanup: true,
-    source: `useEffect(() => {
-  const controller = new AbortController();
+    guardsCommittedGeneration: true,
+    hasLoadingIndicator: false,
+    source: `const generation = useRef(0);
 
-  loadTodo(todoId, controller.signal).then(setTodo);
+useLayoutEffect(() => {
+  generation.current += 1;
+  return () => { generation.current += 1; };
+}, [todoId]);
+
+useEffect(() => {
+  const controller = new AbortController();
+  const current = generation.current;
+
+  loadTodo(todoId, controller.signal)
+    .then((todo) => {
+      if (generation.current === current) setTodo(todo);
+    })
+    .catch((error) => {
+      if (error.name !== "AbortError") throw error;
+    });
 
   return () => controller.abort();
 }, [todoId]);`,
@@ -38,6 +58,8 @@ export const fetchRaceVariants: Record<FetchRaceVariantId, FetchRaceVariant> = {
     id: "fetch-race/distractor-loading-v1",
     label: "Add a loading state",
     abortOnCleanup: false,
+    guardsCommittedGeneration: false,
+    hasLoadingIndicator: true,
     source: `useEffect(() => {
   setLoading(true);
   loadTodo(todoId).then((todo) => {

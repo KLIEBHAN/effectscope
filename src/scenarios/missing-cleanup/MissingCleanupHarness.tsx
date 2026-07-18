@@ -7,6 +7,8 @@ import {
 } from "./variants";
 
 type MissingCleanupHarnessProps = {
+  /** New run IDs require a fresh scheduler and trace; variant changes start a new run. */
+  runId: string;
   mounted: boolean;
   instanceId: string;
   cycle: 0 | 1;
@@ -15,33 +17,51 @@ type MissingCleanupHarnessProps = {
   trace: TraceSession;
 };
 
-type TimerProbeProps = Omit<MissingCleanupHarnessProps, "mounted">;
+type MissingCleanupRunProps = Omit<MissingCleanupHarnessProps, "runId">;
+type TimerProbeProps = Omit<MissingCleanupRunProps, "mounted">;
 
-export function MissingCleanupHarness({ mounted, ...probeProps }: MissingCleanupHarnessProps) {
-  const lastRenderKey = useRef("");
-  const renderKey = `${probeProps.instanceId}:${String(mounted)}`;
+export function MissingCleanupHarness({
+  runId,
+  variantId,
+  ...runProps
+}: MissingCleanupHarnessProps) {
+  return (
+    <MissingCleanupRun
+      key={`${runId}:${variantId}`}
+      {...runProps}
+      variantId={variantId}
+    />
+  );
+}
 
+function MissingCleanupRun({
+  mounted,
+  instanceId,
+  cycle,
+  variantId,
+  scheduler,
+  trace,
+}: MissingCleanupRunProps) {
   useLayoutEffect(() => {
-    if (lastRenderKey.current === renderKey) {
-      return;
-    }
-
-    lastRenderKey.current = renderKey;
-    probeProps.trace.emit({
+    trace.emit({
       kind: "render",
-      actor: probeProps.instanceId,
+      actor: instanceId,
       message: mounted
-        ? `${probeProps.instanceId} committed as mounted.`
-        : `${probeProps.instanceId} committed as unmounted.`,
-      data: {
-        instanceId: probeProps.instanceId,
-        cycle: probeProps.cycle,
-        mounted,
-      },
+        ? `${instanceId} committed as mounted.`
+        : `${instanceId} committed as unmounted.`,
+      data: { instanceId, cycle, mounted },
     });
-  }, [mounted, probeProps.cycle, probeProps.instanceId, probeProps.trace, renderKey]);
+  }, [cycle, instanceId, mounted, trace]);
 
-  return mounted ? <TimerProbe key={probeProps.instanceId} {...probeProps} /> : null;
+  return mounted ? (
+    <TimerProbe
+      cycle={cycle}
+      instanceId={instanceId}
+      scheduler={scheduler}
+      trace={trace}
+      variantId={variantId}
+    />
+  ) : null;
 }
 
 function TimerProbe({
@@ -52,12 +72,14 @@ function TimerProbe({
   trace,
 }: TimerProbeProps) {
   const variant = missingCleanupVariants[variantId];
+  const effectSequence = useRef(0);
   const tickCount = useRef(0);
   const [visibleTicks, setVisibleTicks] = useState(0);
 
   useEffect(() => {
-    const timerActor = `timer-${instanceId}`;
-    const handles: ScheduledHandle[] = [];
+    const effectRun = ++effectSequence.current;
+    const timerActor = `timer-${instanceId}-${String(effectRun)}`;
+    const handles: Array<{ actor: string; handle: ScheduledHandle }> = [];
 
     trace.emit({
       kind: "effect_start",
@@ -75,18 +97,17 @@ function TimerProbe({
         data: { instanceId, cycle },
       });
 
-      handles.push(
-        scheduler.scheduleInterval(500, () => {
-          tickCount.current += 1;
-          trace.emit({
-            kind: "timer_tick",
-            actor,
-            message: `${actor} produced tick ${String(tickCount.current)}.`,
-            data: { instanceId, cycle, tick: tickCount.current },
-          });
-          setVisibleTicks((current) => current + 1);
-        }),
-      );
+      const handle = scheduler.scheduleInterval(500, () => {
+        tickCount.current += 1;
+        trace.emit({
+          kind: "timer_tick",
+          actor,
+          message: `${actor} produced tick ${String(tickCount.current)}.`,
+          data: { instanceId, cycle, tick: tickCount.current },
+        });
+        setVisibleTicks((current) => current + 1);
+      });
+      handles.push({ actor, handle });
     };
 
     startTimer();
@@ -99,23 +120,26 @@ function TimerProbe({
     }
 
     return () => {
+      for (const { handle } of handles) {
+        handle.cancel();
+      }
+
       trace.emit({
         kind: "cleanup",
         actor: `effect-${instanceId}`,
         message: `Timer effect cleanup ran for ${instanceId}.`,
         data: { instanceId, cycle },
       });
-      for (const [index, handle] of handles.entries()) {
-        handle.cancel();
+      for (const { actor } of handles) {
         trace.emit({
           kind: "timer_stop",
-          actor: `${timerActor}${index === 0 ? "" : "-extra"}`,
-          message: `Timer ${String(index + 1)} stopped for ${instanceId}.`,
+          actor,
+          message: `${actor} stopped.`,
           data: { instanceId, cycle },
         });
       }
     };
-  }, [cycle, instanceId, scheduler, trace, variant.cleansUp, variant.startsExtraTimer]);
+  }, [cycle, instanceId, scheduler, trace, variant]);
 
   return (
     <output aria-label={`Ticks for ${instanceId}`} data-ticks={visibleTicks}>

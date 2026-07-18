@@ -8,18 +8,23 @@ import {
   type MissingCleanupVariantId,
 } from "./missing-cleanup/variants";
 
-export type ScenarioVariantId = FetchRaceVariantId | MissingCleanupVariantId;
+export type ScenarioVariantMap = {
+  "fetch-race": FetchRaceVariantId;
+  "missing-cleanup": MissingCleanupVariantId;
+};
 
-export const scenarioVariantRegistry: Record<ScenarioId, readonly ScenarioVariantId[]> = {
+export type ScenarioVariantId = ScenarioVariantMap[ScenarioId];
+
+export const scenarioVariantRegistry: {
+  readonly [Id in ScenarioId]: readonly ScenarioVariantMap[Id][];
+} = {
   "fetch-race": fetchRaceVariantIds,
   "missing-cleanup": missingCleanupVariantIds,
 };
 
-const knownVariantIds = new Set<ScenarioVariantId>([
-  ...fetchRaceVariantIds,
-  ...missingCleanupVariantIds,
-]);
-
-export function isScenarioVariantId(value: string): value is ScenarioVariantId {
-  return knownVariantIds.has(value as ScenarioVariantId);
+export function isScenarioVariantIdFor<Id extends ScenarioId>(
+  scenarioId: Id,
+  value: string,
+): value is ScenarioVariantMap[Id] {
+  return (scenarioVariantRegistry[scenarioId] as readonly string[]).includes(value);
 }

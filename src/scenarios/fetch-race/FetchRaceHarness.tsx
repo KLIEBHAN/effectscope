@@ -6,11 +6,15 @@ import { fetchRaceVariants, type FetchRaceVariantId } from "./variants";
 export type TodoSelection = "B" | "C";
 
 type FetchRaceHarnessProps = {
+  /** New run IDs require a fresh scheduler and trace; variant changes start a new run. */
+  runId: string;
   selected: TodoSelection;
   variantId: FetchRaceVariantId;
   scheduler: ScenarioScheduler;
   trace: TraceSession;
 };
+
+type FetchRaceProbeProps = Omit<FetchRaceHarnessProps, "runId">;
 
 const requestDelay: Record<TodoSelection, number> = {
   B: 1_200,
@@ -18,36 +22,53 @@ const requestDelay: Record<TodoSelection, number> = {
 };
 
 export function FetchRaceHarness({
+  runId,
+  variantId,
+  ...probeProps
+}: FetchRaceHarnessProps) {
+  return (
+    <FetchRaceProbe
+      key={`${runId}:${variantId}`}
+      {...probeProps}
+      variantId={variantId}
+    />
+  );
+}
+
+function FetchRaceProbe({
   selected,
   variantId,
   scheduler,
   trace,
-}: FetchRaceHarnessProps) {
+}: FetchRaceProbeProps) {
   const variant = fetchRaceVariants[variantId];
-  const latestSelection = useRef(selected);
-  const lastTracedSelection = useRef<TodoSelection | null>(null);
-  const activeRequests = useRef(new Set<TodoSelection>());
+  const committedSelection = useRef(selected);
+  const committedGeneration = useRef(0);
+  const requestSequence = useRef(0);
+  const activeRequests = useRef(new Set<string>());
   const [visibleTodo, setVisibleTodo] = useState<TodoSelection | null>(null);
-
-  latestSelection.current = selected;
+  const [loading, setLoading] = useState(false);
 
   useLayoutEffect(() => {
-    if (lastTracedSelection.current === selected) {
-      return;
-    }
-
-    lastTracedSelection.current = selected;
+    committedSelection.current = selected;
+    committedGeneration.current += 1;
     trace.emit({
       kind: "render",
       actor: `selection-${selected}`,
       message: `Committed render for selection ${selected}.`,
       data: { selection: selected },
     });
+
+    return () => {
+      committedGeneration.current += 1;
+    };
   }, [selected, trace]);
 
   useEffect(() => {
-    const requestActor = `request-${selected}`;
-    const isLatest = () => latestSelection.current === selected;
+    const requestNumber = ++requestSequence.current;
+    const requestId = `request-${selected}-${String(requestNumber)}`;
+    const requestGeneration = committedGeneration.current;
+    const isLatest = () => committedSelection.current === selected;
     const requests = activeRequests.current;
     let handle: ScheduledHandle | null = null;
 
@@ -55,36 +76,74 @@ export function FetchRaceHarness({
       kind: "effect_start",
       actor: `effect-${selected}`,
       message: `Effect started for selection ${selected}.`,
-      data: { selection: selected },
+      data: { selection: selected, requestId },
     });
 
-    requests.add(selected);
+    requests.add(requestId);
     trace.emit({
       kind: "async_start",
-      actor: requestActor,
+      actor: requestId,
       message: `Request ${selected} started.`,
-      data: { selection: selected, delayMs: requestDelay[selected], latest: true },
+      data: {
+        requestId,
+        selection: selected,
+        delayMs: requestDelay[selected],
+      },
     });
 
+    if (variant.hasLoadingIndicator) {
+      setLoading(true);
+      trace.emit({
+        kind: "loading_change",
+        actor: `loading-${selected}`,
+        message: `Loading indicator shown for ${selected}.`,
+        data: { requestId, selection: selected, loading: true },
+      });
+    }
+
     handle = scheduler.scheduleTimeout(requestDelay[selected], () => {
-      requests.delete(selected);
+      requests.delete(requestId);
       const latest = isLatest();
 
       trace.emit({
         kind: "async_resolve",
-        actor: requestActor,
+        actor: requestId,
         message: `Request ${selected} resolved.`,
-        data: { selection: selected, latest },
+        data: { requestId, selection: selected },
       });
+
+      if (
+        variant.guardsCommittedGeneration &&
+        requestGeneration !== committedGeneration.current
+      ) {
+        trace.emit({
+          kind: "response_ignored",
+          actor: requestId,
+          message: `Obsolete response ${selected} was ignored.`,
+          data: { requestId, selection: selected },
+        });
+        return;
+      }
+
       trace.emit({
         kind: latest ? "state_write" : "stale_write",
         actor: `todo-${selected}`,
         message: latest
           ? `Visible todo updated to ${selected}.`
           : `Stale request ${selected} overwrote the latest selection.`,
-        data: { selection: selected, latest },
+        data: { requestId, selection: selected },
       });
       setVisibleTodo(selected);
+
+      if (variant.hasLoadingIndicator) {
+        setLoading(false);
+        trace.emit({
+          kind: "loading_change",
+          actor: `loading-${selected}`,
+          message: `Loading indicator hidden by response ${selected}.`,
+          data: { requestId, selection: selected, loading: false },
+        });
+      }
     });
 
     if (!variant.abortOnCleanup) {
@@ -92,28 +151,40 @@ export function FetchRaceHarness({
     }
 
     return () => {
+      const wasActive = requests.delete(requestId);
+      if (wasActive) {
+        handle?.cancel();
+      }
+
       trace.emit({
         kind: "cleanup",
         actor: `effect-${selected}`,
         message: `Cleanup ran for selection ${selected}.`,
-        data: { selection: selected },
+        data: { requestId, selection: selected },
       });
 
-      if (requests.delete(selected)) {
-        handle?.cancel();
+      if (wasActive) {
         trace.emit({
           kind: "abort",
-          actor: requestActor,
+          actor: requestId,
           message: `Request ${selected} was aborted before it resolved.`,
-          data: { selection: selected, latest: isLatest() },
+          data: { requestId, selection: selected },
         });
       }
     };
-  }, [scheduler, selected, trace, variant.abortOnCleanup]);
+  }, [scheduler, selected, trace, variant]);
 
   return (
-    <output aria-label="Visible todo" data-selection={visibleTodo ?? "none"}>
-      {visibleTodo ? `Todo ${visibleTodo}` : "No todo loaded"}
+    <output
+      aria-label="Visible todo"
+      data-loading={String(loading)}
+      data-selection={visibleTodo ?? "none"}
+    >
+      {loading
+        ? `Loading todo ${selected}…`
+        : visibleTodo
+          ? `Todo ${visibleTodo}`
+          : "No todo loaded"}
     </output>
   );
 }

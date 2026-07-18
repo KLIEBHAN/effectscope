@@ -9,38 +9,12 @@ export type ScenarioScheduler = {
   dispose: () => void;
 };
 
-export function createBrowserScheduler(): ScenarioScheduler {
-  const cancellations = new Set<() => void>();
-
-  const register = (cancel: () => void): ScheduledHandle => {
-    cancellations.add(cancel);
-    return {
-      cancel() {
-        cancel();
-        cancellations.delete(cancel);
-      },
-    };
-  };
-
-  return {
-    now: () => performance.now(),
-    scheduleTimeout(delayMs, task) {
-      const timeoutId = window.setTimeout(() => {
-        cancellations.delete(cancel);
-        task();
-      }, delayMs);
-      const cancel = () => window.clearTimeout(timeoutId);
-      return register(cancel);
-    },
-    scheduleInterval(intervalMs, task) {
-      const intervalId = window.setInterval(task, intervalMs);
-      return register(() => window.clearInterval(intervalId));
-    },
-    dispose() {
-      for (const cancel of cancellations) {
-        cancel();
-      }
-      cancellations.clear();
-    },
-  };
+export function assertValidDelay(value: number, allowZero: boolean): void {
+  if (!Number.isFinite(value) || value < 0 || (!allowZero && value === 0)) {
+    throw new Error(
+      allowZero
+        ? "Scheduled delay must be finite and non-negative."
+        : "Scheduled interval must be finite and greater than zero.",
+    );
+  }
 }

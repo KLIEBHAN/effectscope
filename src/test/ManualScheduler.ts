@@ -1,4 +1,8 @@
-import type { ScenarioScheduler, ScheduledHandle } from "../domain/scheduler";
+import {
+  assertValidDelay,
+  type ScenarioScheduler,
+  type ScheduledHandle,
+} from "../domain/scheduler";
 
 type ManualTask = {
   id: number;
@@ -12,6 +16,7 @@ export class ManualScheduler implements ScenarioScheduler {
   private clock = 0;
   private nextId = 1;
   private readonly tasks = new Map<number, ManualTask>();
+  private disposed = false;
 
   now = () => this.clock;
 
@@ -24,6 +29,8 @@ export class ManualScheduler implements ScenarioScheduler {
   }
 
   advanceBy(durationMs: number): void {
+    this.assertActive();
+    assertValidDelay(durationMs, true);
     const target = this.clock + durationMs;
     let iterations = 0;
 
@@ -55,6 +62,10 @@ export class ManualScheduler implements ScenarioScheduler {
   }
 
   dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+    this.disposed = true;
     this.tasks.clear();
   }
 
@@ -63,12 +74,8 @@ export class ManualScheduler implements ScenarioScheduler {
     intervalMs: number | null,
     run: () => void,
   ): ScheduledHandle {
-    if (!Number.isFinite(delayMs) || delayMs < 0) {
-      throw new Error("Scheduled delay must be a finite non-negative number.");
-    }
-    if (intervalMs !== null && intervalMs === 0) {
-      throw new Error("Scheduled interval must be greater than zero.");
-    }
+    this.assertActive();
+    assertValidDelay(delayMs, intervalMs === null);
 
     const task: ManualTask = {
       id: this.nextId++,
@@ -85,5 +92,11 @@ export class ManualScheduler implements ScenarioScheduler {
         this.tasks.delete(task.id);
       },
     };
+  }
+
+  private assertActive(): void {
+    if (this.disposed) {
+      throw new Error("Cannot use scheduler after disposal.");
+    }
   }
 }

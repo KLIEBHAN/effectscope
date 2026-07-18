@@ -25,9 +25,10 @@ describe("ManualScheduler", () => {
     scheduler.advanceBy(10);
     scheduler.scheduleTimeout(5, tick);
     scheduler.dispose();
-    scheduler.advanceBy(10);
 
     expect(tick).toHaveBeenCalledTimes(2);
+    expect(() => scheduler.advanceBy(10)).toThrow(/after disposal/);
+    expect(() => scheduler.scheduleTimeout(1, tick)).toThrow(/after disposal/);
   });
 
   it("rejects invalid scheduling values", () => {
@@ -35,5 +36,9 @@ describe("ManualScheduler", () => {
 
     expect(() => scheduler.scheduleTimeout(-1, () => undefined)).toThrow();
     expect(() => scheduler.scheduleInterval(0, () => undefined)).toThrow();
+    expect(() => scheduler.scheduleTimeout(Number.NaN, () => undefined)).toThrow();
+    expect(() => scheduler.advanceBy(-1)).toThrow();
+    expect(() => scheduler.advanceBy(Number.NaN)).toThrow();
+    expect(scheduler.now()).toBe(0);
   });
 });

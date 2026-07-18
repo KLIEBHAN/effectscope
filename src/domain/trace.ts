@@ -1,6 +1,6 @@
 export type ScenarioId = "fetch-race" | "missing-cleanup";
 
-export type TraceEventKind =
+export type RuntimeTraceEventKind =
   | "render"
   | "effect_start"
   | "timer_start"
@@ -10,15 +10,20 @@ export type TraceEventKind =
   | "async_resolve"
   | "cleanup"
   | "abort"
+  | "response_ignored"
+  | "loading_change"
   | "value_read"
   | "state_write"
-  | "stale_write"
+  | "stale_write";
+
+export type TraceEventKind =
+  | RuntimeTraceEventKind
   | "invariant_pass"
   | "invariant_fail";
 
-export type TraceData = Record<string, string | number | boolean>;
+export type TraceData = Readonly<Record<string, string | number | boolean>>;
 
-export type TraceEvent = {
+export type TraceEvent = Readonly<{
   id: string;
   sequence: number;
   atMs: number;
@@ -26,20 +31,27 @@ export type TraceEvent = {
   actor: string;
   message: string;
   data?: TraceData;
+}>;
+
+export type TraceEventInput = {
+  kind: RuntimeTraceEventKind;
+  actor: string;
+  message: string;
+  data?: Record<string, string | number | boolean>;
 };
 
-export type TraceEventInput = Omit<TraceEvent, "id" | "sequence" | "atMs">;
-
-export type InvariantState = {
+export type InvariantState = Readonly<{
   status: "pending" | "pass" | "fail";
   id: string;
   message: string;
-};
+}>;
 
 export type InvariantEvaluator = (events: readonly TraceEvent[]) => InvariantState;
 
 export type TraceSession = {
-  emit: (event: TraceEventInput) => TraceEvent;
+  emit: (event: TraceEventInput) => TraceEvent | null;
+  finalize: () => TraceEvent;
+  isFinalized: () => boolean;
   snapshot: () => readonly TraceEvent[];
 };
 
@@ -48,55 +60,88 @@ type CreateTraceSessionOptions = {
   now: () => number;
   evaluate: InvariantEvaluator;
   onEvent?: (event: TraceEvent) => void;
+  onObserverError?: (error: unknown) => void;
 };
+
+const invariantKinds = new Set<TraceEventKind>([
+  "invariant_pass",
+  "invariant_fail",
+]);
 
 export function createTraceSession({
   runId,
   now,
   evaluate,
   onEvent,
+  onObserverError,
 }: CreateTraceSessionOptions): TraceSession {
   const events: TraceEvent[] = [];
-  let terminalStatus: "pass" | "fail" | null = null;
+  let finalized = false;
 
-  const append = (input: TraceEventInput): TraceEvent => {
-    const sequence = events.length + 1;
-    const event: TraceEvent = {
+  const notify = (event: TraceEvent) => {
+    try {
+      onEvent?.(event);
+    } catch (error) {
+      try {
+        onObserverError?.(error);
+      } catch {
+        // Observers cannot alter scenario execution or trace truth.
+      }
+    }
+  };
+
+  const append = (
+    input: Omit<TraceEvent, "id" | "sequence" | "atMs">,
+  ): TraceEvent => {
+    const event = Object.freeze({
       ...input,
-      id: `${runId}-${sequence}`,
-      sequence,
+      data: input.data ? Object.freeze({ ...input.data }) : undefined,
+      id: `${runId}-${String(events.length + 1)}`,
+      sequence: events.length + 1,
       atMs: now(),
-    };
+    });
 
     events.push(event);
-    onEvent?.(event);
+    notify(event);
     return event;
   };
 
   return {
     emit(input) {
-      const event = append(input);
-
-      if (input.kind.startsWith("invariant_") || terminalStatus) {
-        return event;
+      if (invariantKinds.has(input.kind as TraceEventKind)) {
+        throw new Error("Invariant events can only be emitted by TraceSession.finalize().");
+      }
+      if (finalized) {
+        return null;
       }
 
-      const invariant = evaluate(events);
-      if (invariant.status === "pending") {
-        return event;
+      return append(input);
+    },
+    finalize() {
+      if (finalized) {
+        const terminal = events.at(-1);
+        if (!terminal || !invariantKinds.has(terminal.kind)) {
+          throw new Error("Finalized trace has no terminal invariant event.");
+        }
+        return terminal;
       }
 
-      terminalStatus = invariant.status;
-      append({
+      const invariant = evaluate(Object.freeze([...events]));
+      finalized = true;
+      const incomplete = invariant.status === "pending";
+
+      return append({
         kind: invariant.status === "pass" ? "invariant_pass" : "invariant_fail",
         actor: invariant.id,
-        message: invariant.message,
+        message: incomplete ? `Run incomplete: ${invariant.message}` : invariant.message,
+        data: incomplete ? { incomplete: true } : undefined,
       });
-
-      return event;
+    },
+    isFinalized() {
+      return finalized;
     },
     snapshot() {
-      return events;
+      return Object.freeze([...events]);
     },
   };
 }

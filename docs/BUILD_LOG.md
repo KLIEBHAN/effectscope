@@ -65,10 +65,9 @@ to 22.13, constrained `package.json` to supported Node ranges, aligned
 Each milestone requires independent GPT-5.6 Sol xhigh reviews before the next
 major implementation step.
 
-## 2026-07-18 — Milestone 1: trace domain and React harnesses
+## 2026-07-18 — Milestone 1a: trace domain and React harnesses
 
-- Added immutable trace events with stable sequence IDs and terminal invariant
-  events.
+- Added trace events with stable sequence IDs and terminal invariant events.
 - Added browser and manual schedulers; tests control time without replacing
   React's effect lifecycle.
 - Added actual React harnesses for Fetch Race and Missing Cleanup.
@@ -82,6 +81,38 @@ Pre-review verification:
 ```text
 npm run lint   -> passed with no warnings
 npm run test   -> 5 files, 11 tests passed
+npm run build  -> passed
+git diff --check -> passed
+```
+
+Initial three-way GPT-5.6 Sol xhigh review verdict: FAIL. Review tasks:
+`/root/m1_react_correctness`, `/root/m1_domain_architecture`, and
+`/root/m1_test_oracles`. Reviewers found a passive-cleanup race, render-time ref
+mutation, mutable trace data, premature invariant passes, actor-insensitive
+timer evaluation, incomplete distractor execution/oracles, and scheduler/reset
+contract gaps.
+
+Remediation:
+
+- Moved committed-selection mutation into layout effects and added a committed
+  generation guard for the cleanup gap and abandoned renders.
+- Made abort an optimization plus generation guard, and executed loading-state
+  distractor behavior instead of only displaying its source.
+- Added explicit trace finalization, runtime invariant-spoof rejection, frozen
+  events/data/snapshots, safe observers, and post-terminal no-op emission.
+- Correlated requests and timers with unique IDs; evaluators now fold complete
+  actor lifecycles and refuse early or partial passes.
+- Added terminal scheduler semantics, shared numeric validation, browser adapter
+  tests, paired scenario/variant validation, and a scheduler-owning runner.
+- Expanded suite with exact distractor Oracles, adversarial evaluator cases,
+  cleanup-gap, unmount-gap, suspended transition, reset, throwing observer,
+  terminal growth, source/runtime behavior, and Strict Mode coverage.
+
+Remediation verification before re-review:
+
+```text
+npm run lint   -> passed with no warnings
+npm run test   -> 9 files, 32 tests passed
 npm run build  -> passed
 git diff --check -> passed
 ```
