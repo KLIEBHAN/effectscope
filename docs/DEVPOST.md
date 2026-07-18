@@ -106,5 +106,5 @@ on schedule.
 ## Links
 
 - Live demo: `[ADD VERIFIED PRODUCTION URL]`
-- Source repository: `[ADD PUBLIC REPOSITORY URL]`
+- Source repository: <https://github.com/KLIEBHAN/effectscope>
 - Public YouTube demo under three minutes: `[ADD VERIFIED VIDEO URL]`

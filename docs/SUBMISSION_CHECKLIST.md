@@ -31,7 +31,7 @@ git diff --check
 
 - [x] All commands pass at release commit `5d7a97f` in a fresh local clone
 - [x] Repository contains no `.env`, API key, token, personal data, or private URL
-- [ ] GitHub Actions passes on public/default branch
+- [x] GitHub Actions passes on public/default branch
 
 ## Live deployment
 
