@@ -29,6 +29,18 @@ npm run lint
   test stack, CI, Node contract, and evidence detail were incomplete.
 - Remediation: added all missing M0 artifacts before feature implementation.
 
+Remediation commit: `c415ffa`
+
+Post-remediation verification:
+
+```text
+npm run lint   -> passed
+npm run test   -> 1 file, 1 test passed
+npm run build  -> passed
+npm audit --audit-level=high -> 0 vulnerabilities
+git diff --check -> passed
+```
+
 ## Planned implementation milestones
 
 1. React scenario harnesses, trace domain, invariants, and golden tests
