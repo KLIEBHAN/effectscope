@@ -22,6 +22,11 @@ export const scenarioVariantRegistry: {
   "missing-cleanup": missingCleanupVariantIds,
 };
 
+export const scenarioVariantIds = [
+  ...fetchRaceVariantIds,
+  ...missingCleanupVariantIds,
+] as const;
+
 export function isScenarioVariantIdFor<Id extends ScenarioId>(
   scenarioId: Id,
   value: string,

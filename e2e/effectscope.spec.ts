@@ -134,6 +134,105 @@ test("main-thread stall preserves the controlled C-before-B race", async ({ page
   await expect(page.getByLabel("Visible todo")).toHaveText("Todo B");
 });
 
+test("GPT-5.6 coaching cites and focuses validated runtime evidence", async ({ page }) => {
+  let requestCount = 0;
+  await page.route("**/api/analyze", async (route) => {
+    requestCount += 1;
+    const attempt = route.request().postDataJSON() as {
+      trace: Array<{ id: string; kind: string }>;
+    };
+    const evidenceId = attempt.trace.find((event) => event.kind === "stale_write")?.id;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        feedback: {
+          verdict: "correct",
+          misconception: "You correctly treated response arrival order as independent from selection order.",
+          evidence: [
+            {
+              eventId: evidenceId,
+              explanation: "The stale B callback performed the final state write.",
+            },
+          ],
+          hint: "Invalidate request work when its owning effect is cleaned up.",
+          transferQuestion: {
+            prompt: "Which boundary can make request B obsolete?",
+            options: ["Effect cleanup", "Loading state"],
+          },
+        },
+        model: "gpt-5.6-terra",
+        requestId: "mock-request-1",
+      }),
+    });
+  });
+
+  await page.goto("/");
+  await choose(page, "Todo C appears, then B overwrites it");
+  await runBug(page);
+  await page.getByRole("button", { name: "Ask GPT-5.6 coach" }).click();
+
+  await expect(page.getByText(/response arrival order as independent/i)).toBeVisible();
+  const evidence = page.locator(".model-evidence button");
+  await evidence.click();
+  const highlighted = page.locator(".timeline__event.is-highlighted");
+  await expect(highlighted).toContainText("stale write", { ignoreCase: true });
+  await expect(highlighted).toBeFocused();
+
+  await page.getByRole("button", { name: "Recheck coaching" }).click();
+  await page.waitForTimeout(50);
+  expect(requestCount).toBe(1);
+});
+
+test("model failure leaves deterministic coaching intact", async ({ page }) => {
+  await page.route("**/api/analyze", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: "Model coaching is not configured. Deterministic evidence remains available.",
+      }),
+    }),
+  );
+  await page.goto("/");
+  await choose(page, "Todo C appears, then B overwrites it");
+  await runBug(page);
+  await page.getByRole("button", { name: "Ask GPT-5.6 coach" }).click();
+
+  await expect(page.getByRole("alert")).toContainText("Deterministic evidence remains available");
+  await expect(page.getByText("Invariant violated", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Retry GPT-5.6 coach" })).toBeEnabled();
+});
+
+test("reset aborts pending model coaching without a late update", async ({ page }) => {
+  let releaseResponse: (() => void) | undefined;
+  const responseGate = new Promise<void>((resolve) => {
+    releaseResponse = resolve;
+  });
+  await page.route("**/api/analyze", async (route) => {
+    await responseGate;
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "This late response must be ignored." }),
+    }).catch(() => undefined);
+  });
+
+  await page.goto("/");
+  await choose(page, "Todo C appears, then B overwrites it");
+  await runBug(page);
+  await page.getByRole("button", { name: "Ask GPT-5.6 coach" }).click();
+  await expect(page.getByText("GPT-5.6 analyzing", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Reset" }).click();
+  releaseResponse?.();
+  await page.waitForTimeout(100);
+
+  await expect(page.getByText("GPT-5.6 analyzing", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("This late response must be ignored.")).toHaveCount(0);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+});
+
 test("mobile learning loop keeps all five steps in viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");

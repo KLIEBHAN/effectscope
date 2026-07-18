@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.api.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "types": ["node", "vitest/globals"],
+    "skipLibCheck": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": [
+    "api",
+    "src/app/scenarioContent.ts",
+    "src/domain/invariant.ts",
+    "src/domain/trace.ts",
+    "src/infrastructure/feedbackSchema.ts",
+    "src/test/analysisFixture.ts",
+    "src/scenarios/registry.ts",
+    "src/scenarios/fetch-race/variants.ts",
+    "src/scenarios/missing-cleanup/variants.ts"
+  ]
+}

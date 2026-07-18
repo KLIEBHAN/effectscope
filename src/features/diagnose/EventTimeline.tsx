@@ -3,6 +3,7 @@ import type { TraceEvent, TraceEventKind } from "../../domain/trace";
 
 type EventTimelineProps = {
   events: readonly TraceEvent[];
+  highlightedEventId: string | null;
   running: boolean;
 };
 
@@ -23,9 +24,14 @@ function eventLabel(kind: TraceEventKind): string {
   return kind.replaceAll("_", " ");
 }
 
-export function EventTimeline({ events, running }: EventTimelineProps) {
+export function EventTimeline({
+  events,
+  highlightedEventId,
+  running,
+}: EventTimelineProps) {
   const start = events[0]?.atMs ?? 0;
   const timelineRef = useRef<HTMLOListElement>(null);
+  const eventRefs = useRef(new Map<string, HTMLLIElement>());
 
   useEffect(() => {
     const timeline = timelineRef.current;
@@ -33,6 +39,13 @@ export function EventTimeline({ events, running }: EventTimelineProps) {
       timeline.scrollTop = timeline.scrollHeight;
     }
   }, [events.length]);
+
+  useEffect(() => {
+    if (!highlightedEventId) return;
+    const target = eventRefs.current.get(highlightedEventId);
+    target?.scrollIntoView?.({ block: "center" });
+    target?.focus();
+  }, [highlightedEventId]);
 
   return (
     <section className="instrument timeline-panel" aria-labelledby="timeline-title">
@@ -62,7 +75,16 @@ export function EventTimeline({ events, running }: EventTimelineProps) {
           {events.map((event) => {
             const group = eventGroup[event.kind] ?? "default";
             return (
-              <li className={`timeline__event timeline__event--${group}`} key={event.id}>
+              <li
+                className={`timeline__event timeline__event--${group}${event.id === highlightedEventId ? " is-highlighted" : ""}`}
+                data-event-id={event.id}
+                key={event.id}
+                ref={(element) => {
+                  if (element) eventRefs.current.set(event.id, element);
+                  else eventRefs.current.delete(event.id);
+                }}
+                tabIndex={-1}
+              >
                 <span className="timeline__sequence">{String(event.sequence).padStart(2, "0")}</span>
                 <span className="timeline__pin" aria-hidden />
                 <div className="timeline__body">

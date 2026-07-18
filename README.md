@@ -50,12 +50,22 @@ npm run test:e2e
 
 ## OpenAI configuration
 
-The planned coach endpoint will use the server-side OpenAI SDK and the Responses
-API with Structured Outputs. After that endpoint lands, copy `.env.example` to
-`.env.local`, then set `OPENAI_API_KEY`. Never expose this value through a
-`VITE_` variable.
+The optional coach endpoint uses the server-side OpenAI SDK, Responses API, and
+Structured Outputs. Copy `.env.example` to `.env.local`, then set
+`OPENAI_API_KEY`. Never expose this value through a `VITE_` variable.
 
 Default runtime model: `gpt-5.6-terra`. Override with `OPENAI_MODEL` when needed.
+
+Run the frontend-only deterministic lab with `npm run dev`. To exercise the
+serverless `/api/analyze` route locally, run the project through Vercel CLI:
+
+```bash
+npx vercel dev
+```
+
+Without an API key, both deterministic learning loops remain fully usable and
+the coach displays a bounded fallback. Model-boundary details are documented in
+[`docs/SECURITY.md`](./docs/SECURITY.md).
 
 ## Project records
 

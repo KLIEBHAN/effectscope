@@ -780,6 +780,12 @@
 .timeline__event--async .timeline__body { border-color: var(--warn); }
 .timeline__event--async .timeline__pin { border-color: var(--warn); }
 
+.timeline__event.is-highlighted {
+  outline: 2px solid var(--info);
+  outline-offset: -2px;
+  background: color-mix(in oklab, var(--info), transparent 94%);
+}
+
 .coach-panel {
   min-height: 220px;
 }
@@ -869,6 +875,110 @@
 
 .verdict .truth-note {
   margin-top: 13px;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.model-coach {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid var(--line);
+}
+
+.model-coach > div > p,
+.model-coach__status,
+.model-coach__error,
+.model-feedback > p {
+  margin: 0 0 11px;
+  color: var(--text-dim);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.model-coach__status {
+  color: var(--info);
+}
+
+.model-coach__error {
+  color: var(--danger);
+}
+
+.model-feedback__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 11px;
+}
+
+.model-feedback__head span,
+.model-feedback__head strong,
+.transfer-question > strong {
+  font: 600 0.6rem/1.2 var(--font-mono);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.model-feedback__head span {
+  color: var(--info);
+}
+
+.model-feedback__head strong {
+  color: var(--text);
+}
+
+.model-evidence {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.model-evidence button {
+  display: grid;
+  grid-template-columns: 66px minmax(0, 1fr);
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--control-border);
+  background: var(--panel-deep);
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.model-evidence button:hover {
+  border-color: var(--info);
+}
+
+.model-evidence button span {
+  color: var(--info);
+  font: 600 0.59rem/1.5 var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.transfer-question {
+  margin: 13px 0;
+  padding: 12px;
+  border-left: 2px solid var(--info);
+  background: color-mix(in oklab, var(--info), transparent 94%);
+}
+
+.transfer-question > strong {
+  color: var(--info);
+}
+
+.transfer-question p {
+  margin: 7px 0;
+  color: var(--text);
+  font-size: 0.75rem;
+}
+
+.transfer-question ul {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding-left: 18px;
   color: var(--muted);
   font-size: 0.68rem;
 }

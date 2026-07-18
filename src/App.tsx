@@ -10,12 +10,21 @@ import { evaluateFetchRace, evaluateMissingCleanup } from "./domain/invariant";
 import { createScenarioRunner, type ScenarioRunner } from "./domain/scenarioRunner";
 import type { ScenarioId, TraceEvent } from "./domain/trace";
 import { CoachPanel } from "./features/diagnose/CoachPanel";
+import type { CoachModelState } from "./features/diagnose/CoachPanel";
 import { EventTimeline } from "./features/diagnose/EventTimeline";
 import { PredictionPanel } from "./features/diagnose/PredictionPanel";
 import { RepairPanel } from "./features/diagnose/RepairPanel";
 import { SourcePanel } from "./features/diagnose/SourcePanel";
 import { createAlignedRequestScheduler } from "./infrastructure/alignedRequestScheduler";
+import {
+  analyzeAttempt,
+  CoachRequestError,
+} from "./infrastructure/analyzeAttempt";
 import { createBrowserScheduler } from "./infrastructure/browserScheduler";
+import type {
+  AnalyzeAttemptRequest,
+  AnalyzeAttemptResponse,
+} from "./infrastructure/feedbackSchema";
 import { FetchRaceHarness, type TodoSelection } from "./scenarios/fetch-race/FetchRaceHarness";
 import { fetchRaceVariants } from "./scenarios/fetch-race/variants";
 import { MissingCleanupHarness } from "./scenarios/missing-cleanup/MissingCleanupHarness";
@@ -98,7 +107,11 @@ export default function App() {
   );
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [bugObservation, setBugObservation] = useState<PredictionFeedback | null>(null);
+  const [modelState, setModelState] = useState<CoachModelState>({ status: "idle" });
+  const [highlightedEventId, setHighlightedEventId] = useState<string | null>(null);
   const runnerRef = useRef<ScenarioRunner | null>(null);
+  const analysisAbortRef = useRef<AbortController | null>(null);
+  const analysisCacheRef = useRef(new Map<string, AnalyzeAttemptResponse>());
   const controlTimers = useRef(new Map<string, number>());
   const eventBuffer = useRef<TraceEvent[]>([]);
   const runSequence = useRef(0);
@@ -116,6 +129,8 @@ export default function App() {
     clearControlTimers();
     runnerRef.current?.dispose();
     runnerRef.current = null;
+    analysisAbortRef.current?.abort();
+    analysisAbortRef.current = null;
   }, [clearControlTimers]);
 
   useEffect(() => disposeCurrentRun, [disposeCurrentRun]);
@@ -180,6 +195,8 @@ export default function App() {
     disposeCurrentRun();
     setRuntimeError(null);
     setEvents([]);
+    setModelState({ status: "idle" });
+    setHighlightedEventId(null);
     eventBuffer.current = [];
     setExecutedVariantId(variantId);
     setStage("running");
@@ -317,6 +334,8 @@ export default function App() {
     setActiveRun(null);
     setRuntimeError(null);
     setBugObservation(null);
+    setModelState({ status: "idle" });
+    setHighlightedEventId(null);
     eventBuffer.current = [];
     setExecutedVariantId(scenarioContent[scenarioId].bugVariantId);
   };
@@ -328,6 +347,8 @@ export default function App() {
     setRepairId(null);
     setRuntimeError(null);
     setBugObservation(null);
+    setModelState({ status: "idle" });
+    setHighlightedEventId(null);
     eventBuffer.current = [];
     setExecutedVariantId(scenarioContent[activeScenario].bugVariantId);
     setStage(predictionId ? "ready" : "predict");
@@ -383,6 +404,53 @@ export default function App() {
       : running
         ? `${content.shortTitle} run in progress.`
         : `${content.shortTitle}: ${runStatus}.`;
+
+  const requestCoaching = async () => {
+    if (!predictionId || !terminalEvent) return;
+    const executedRepair = content.repairs.find(
+      (repair) => repair.variantId === executedVariantId,
+    );
+    const request: AnalyzeAttemptRequest = {
+      scenarioId: activeScenario,
+      predictionId,
+      repairId: executedRepair?.id ?? null,
+      sourceVariant: executedVariantId,
+      invariantPassed: terminalEvent.kind === "invariant_pass",
+      trace: events.map((event) => ({
+        ...event,
+        data: event.data ? { ...event.data } : undefined,
+      })),
+    };
+    const cacheKey = JSON.stringify(request);
+    const cached = analysisCacheRef.current.get(cacheKey);
+    if (cached) {
+      setModelState({ status: "success", response: cached });
+      return;
+    }
+
+    analysisAbortRef.current?.abort();
+    const controller = new AbortController();
+    analysisAbortRef.current = controller;
+    setModelState({ status: "loading" });
+    try {
+      const response = await analyzeAttempt(request, { signal: controller.signal });
+      if (controller.signal.aborted) return;
+      analysisCacheRef.current.set(cacheKey, response);
+      setModelState({ status: "success", response });
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      setModelState({
+        status: "error",
+        message: error instanceof CoachRequestError
+          ? error.message
+          : "Model coaching is unavailable. Deterministic evidence remains available.",
+      });
+    } finally {
+      if (analysisAbortRef.current === controller) {
+        analysisAbortRef.current = null;
+      }
+    }
+  };
 
   const chooseRepair = (choice: RepairChoice) => {
     setRepairId(choice.id);
@@ -562,11 +630,18 @@ export default function App() {
             </div>
 
             <div className="workbench__right">
-              <EventTimeline events={events} running={running} />
+              <EventTimeline
+                events={events}
+                highlightedEventId={highlightedEventId}
+                running={running}
+              />
               <CoachPanel
                 actualBugOutcome={bugObservation?.actualOutcome ?? content.actualBugOutcome}
                 events={events}
                 executedVariantLabel={sourceVariant.label}
+                modelState={modelState}
+                onEvidence={setHighlightedEventId}
+                onRequest={() => void requestCoaching()}
                 predictionAssessment={predictionAssessment}
                 predictionLabel={selectedPrediction?.label ?? null}
                 verdictRef={verdictRef}
