@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { scenarioContent, type RepairChoice } from "./app/scenarioContent";
+import { evaluateFetchRace, evaluateMissingCleanup } from "./domain/invariant";
 import { createScenarioRunner, type ScenarioRunner } from "./domain/scenarioRunner";
 import type { ScenarioId, TraceEvent } from "./domain/trace";
 import { CoachPanel } from "./features/diagnose/CoachPanel";
@@ -82,22 +84,25 @@ export default function App() {
   const [stage, setStage] = useState<ExperienceStage>("predict");
   const [events, setEvents] = useState<readonly TraceEvent[]>([]);
   const [activeRun, setActiveRun] = useState<ActiveRun | null>(null);
-  const [activeVariantId, setActiveVariantId] = useState<ScenarioVariantId>(
+  const [executedVariantId, setExecutedVariantId] = useState<ScenarioVariantId>(
     scenarioContent["fetch-race"].bugVariantId,
   );
   const [completedScenarios, setCompletedScenarios] = useState<ReadonlySet<ScenarioId>>(
     new Set(),
   );
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
-  const runnerRef = useRef<{ dispose: () => void } | null>(null);
-  const controlTimers = useRef<number[]>([]);
+  const runnerRef = useRef<ScenarioRunner | null>(null);
+  const controlTimers = useRef(new Map<string, number>());
+  const eventBuffer = useRef<TraceEvent[]>([]);
   const runSequence = useRef(0);
+  const repairHeadingRef = useRef<HTMLHeadingElement>(null);
+  const verdictRef = useRef<HTMLDivElement>(null);
 
   const clearControlTimers = useCallback(() => {
-    for (const timer of controlTimers.current) {
+    for (const timer of controlTimers.current.values()) {
       window.clearTimeout(timer);
     }
-    controlTimers.current = [];
+    controlTimers.current.clear();
   }, []);
 
   const disposeCurrentRun = useCallback(() => {
@@ -108,11 +113,27 @@ export default function App() {
 
   useEffect(() => disposeCurrentRun, [disposeCurrentRun]);
 
-  const scheduleControl = (delayMs: number, task: () => void) => {
-    controlTimers.current.push(window.setTimeout(task, delayMs));
+  useEffect(() => {
+    if (stage === "repair") {
+      repairHeadingRef.current?.focus();
+    } else if (stage === "proved") {
+      verdictRef.current?.focus();
+    }
+  }, [stage]);
+
+  const scheduleControl = (key: string, delayMs: number, task: () => void) => {
+    if (controlTimers.current.has(key)) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      controlTimers.current.delete(key);
+      task();
+    }, delayMs);
+    controlTimers.current.set(key, timer);
   };
 
-  const recordEvent = (scenarioId: ScenarioId) => (event: TraceEvent) => {
+  const recordEvent = (scenarioId: ScenarioId, event: TraceEvent) => {
+    eventBuffer.current.push(event);
     setEvents((current) => [...current, event]);
     if (event.kind === "invariant_pass") {
       setCompletedScenarios((current) => new Set(current).add(scenarioId));
@@ -140,7 +161,8 @@ export default function App() {
     disposeCurrentRun();
     setRuntimeError(null);
     setEvents([]);
-    setActiveVariantId(variantId);
+    eventBuffer.current = [];
+    setExecutedVariantId(variantId);
     setStage("running");
     const runId = `${activeScenario}-${String(++runSequence.current)}`;
 
@@ -148,34 +170,100 @@ export default function App() {
       if (!isScenarioVariantIdFor("fetch-race", variantId)) {
         throw new Error("Fetch Race received a variant from another scenario.");
       }
-      const runner = createScenarioRunner({
+      let runner: ScenarioRunner<"fetch-race">;
+      runner = createScenarioRunner({
         runId,
         scenarioId: "fetch-race",
         variantId,
         scheduler: createBrowserScheduler(),
-        onEvent: recordEvent("fetch-race"),
+        onEvent: (event) => {
+          recordEvent("fetch-race", event);
+          if (
+            event.kind === "async_start" &&
+            event.data?.selection === "B"
+          ) {
+            scheduleControl(`${runId}:select-c`, 60, () => {
+              if (runnerRef.current !== runner) return;
+              flushSync(() => {
+                setActiveRun((current) =>
+                  current?.runner === runner
+                    ? { ...current, selected: "C" }
+                    : current,
+                );
+              });
+            });
+          }
+
+          if (event.kind === "invariant_pass" || event.kind === "invariant_fail") {
+            return;
+          }
+          const result = evaluateFetchRace(eventBuffer.current);
+          if (result.status !== "pending") {
+            scheduleControl(`${runId}:finish`, 0, () => finishRunner(runner));
+          }
+        },
         onObserverError: () => setRuntimeError("Trace display could not process an event."),
       });
       runnerRef.current = runner;
       setActiveRun({ scenarioId: "fetch-race", runner, selected: "B" });
-      scheduleControl(80, () => {
-        setActiveRun((current) =>
-          current?.runner === runner ? { ...current, selected: "C" } : current,
-        );
-      });
-      scheduleControl(1_350, () => finishRunner(runner));
       return;
     }
 
     if (!isScenarioVariantIdFor("missing-cleanup", variantId)) {
       throw new Error("Missing Cleanup received a variant from another scenario.");
     }
-    const runner = createScenarioRunner({
+    let runner: ScenarioRunner<"missing-cleanup">;
+    runner = createScenarioRunner({
       runId,
       scenarioId: "missing-cleanup",
       variantId,
       scheduler: createBrowserScheduler(),
-      onEvent: recordEvent("missing-cleanup"),
+      onEvent: (event) => {
+        recordEvent("missing-cleanup", event);
+        if (event.kind === "invariant_pass" || event.kind === "invariant_fail") {
+          return;
+        }
+
+        if (event.kind === "timer_tick" && event.data?.cycle === 0) {
+          scheduleControl(`${runId}:unmount`, 40, () => {
+            if (runnerRef.current !== runner) return;
+            flushSync(() => {
+              setActiveRun((current) =>
+                current?.runner === runner ? { ...current, mounted: false } : current,
+              );
+            });
+          });
+        }
+
+        if (
+          event.kind === "render" &&
+          event.data?.cycle === 0 &&
+          event.data.mounted === false
+        ) {
+          scheduleControl(`${runId}:remount`, 60, () => {
+            if (runnerRef.current !== runner) return;
+            flushSync(() => {
+              setActiveRun((current) =>
+                current?.runner === runner
+                  ? {
+                      ...current,
+                      mounted: true,
+                      instanceId: "instance-2",
+                      cycle: 1,
+                    }
+                  : current,
+              );
+            });
+          });
+        }
+
+        if (event.kind === "timer_tick" && event.data?.cycle === 1) {
+          const result = evaluateMissingCleanup(eventBuffer.current);
+          if (result.status !== "pending") {
+            scheduleControl(`${runId}:finish`, 0, () => finishRunner(runner));
+          }
+        }
+      },
       onObserverError: () => setRuntimeError("Trace display could not process an event."),
     });
     runnerRef.current = runner;
@@ -186,19 +274,6 @@ export default function App() {
       instanceId: "instance-1",
       cycle: 0,
     });
-    scheduleControl(560, () => {
-      setActiveRun((current) =>
-        current?.runner === runner ? { ...current, mounted: false } : current,
-      );
-    });
-    scheduleControl(680, () => {
-      setActiveRun((current) =>
-        current?.runner === runner
-          ? { ...current, mounted: true, instanceId: "instance-2", cycle: 1 }
-          : current,
-      );
-    });
-    scheduleControl(1_320, () => finishRunner(runner));
   };
 
   const selectScenario = (scenarioId: ScenarioId) => {
@@ -210,7 +285,8 @@ export default function App() {
     setEvents([]);
     setActiveRun(null);
     setRuntimeError(null);
-    setActiveVariantId(scenarioContent[scenarioId].bugVariantId);
+    eventBuffer.current = [];
+    setExecutedVariantId(scenarioContent[scenarioId].bugVariantId);
   };
 
   const resetAttempt = () => {
@@ -219,25 +295,58 @@ export default function App() {
     setActiveRun(null);
     setRepairId(null);
     setRuntimeError(null);
-    setActiveVariantId(scenarioContent[activeScenario].bugVariantId);
+    eventBuffer.current = [];
+    setExecutedVariantId(scenarioContent[activeScenario].bugVariantId);
     setStage(predictionId ? "ready" : "predict");
   };
 
   const content = scenarioContent[activeScenario];
-  const sourceVariant = sourceForVariant(activeVariantId);
+  const sourceVariant = sourceForVariant(executedVariantId);
   const selectedRepair = content.repairs.find((choice) => choice.id === repairId) ?? null;
   const running = stage === "running";
-  const terminalEvent = events.at(-1);
+  const terminalEvent = events.findLast(
+    (event) => event.kind === "invariant_pass" || event.kind === "invariant_fail",
+  );
+  const selectedPrediction = content.predictions.find(
+    (choice) => choice.id === predictionId,
+  );
+  const predictionCorrect = predictionId === content.correctPredictionId;
+  const runStatus = running
+    ? "Running"
+    : stage === "predict"
+      ? "Needs prediction"
+      : stage === "ready"
+        ? "Ready"
+        : stage === "repair"
+          ? "Failed"
+          : "Proved";
+  const loopSteps = [
+    { label: "Predict", done: predictionId !== null },
+    { label: "Run", done: events.length > 0 },
+    { label: "Observe", done: terminalEvent !== undefined },
+    { label: "Repair", done: repairId !== null },
+    { label: "Prove", done: stage === "proved" },
+  ];
+  const currentLoopStep = loopSteps.findIndex((step) => !step.done);
+  const announcement = runtimeError
+    ? runtimeError
+    : terminalEvent
+      ? `${terminalEvent.kind === "invariant_pass" ? "Invariant proved" : "Invariant violated"}. ${terminalEvent.message}`
+      : running
+        ? `${content.shortTitle} run in progress.`
+        : `${content.shortTitle}: ${runStatus}.`;
 
   const chooseRepair = (choice: RepairChoice) => {
     setRepairId(choice.id);
-    setActiveVariantId(choice.variantId);
   };
 
   return (
     <div className="app-shell">
+      <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {announcement}
+      </p>
       <header className="topbar">
-        <a className="brand" href="#workspace" aria-label="EffectScope home">
+        <a className="brand" href="#workspace" aria-label="Jump to EffectScope workspace">
           <span className="brand__mark" aria-hidden>ES</span>
           <span>
             <strong>EffectScope</strong>
@@ -254,7 +363,7 @@ export default function App() {
         <aside className="scenario-rail">
           <div className="rail-intro">
             <p className="kicker">Diagnostic queue</p>
-            <strong>{completedScenarios.size} / 2 proved</strong>
+            <strong>{completedScenarios.size} / 2 proved once</strong>
             <div
               className="progress-track"
               role="progressbar"
@@ -320,15 +429,17 @@ export default function App() {
           </section>
 
           <div className="loop-strip" role="list" aria-label="Learning loop progress">
-            {[
-              ["Predict", predictionId !== null],
-              ["Run", events.length > 0],
-              ["Observe", terminalEvent !== undefined],
-              ["Repair", repairId !== null],
-              ["Prove", stage === "proved"],
-            ].map(([label, done], index) => (
-              <span className={done ? "is-done" : ""} key={String(label)} role="listitem">
-                <b>{String(index + 1).padStart(2, "0")}</b>{String(label)}
+            {loopSteps.map(({ label, done }, index) => (
+              <span
+                className={`${done ? "is-done" : ""}${index === currentLoopStep ? " is-current" : ""}`}
+                key={label}
+                role="listitem"
+                aria-current={index === currentLoopStep ? "step" : undefined}
+              >
+                <b>{String(index + 1).padStart(2, "0")}</b>{label}
+                <span className="sr-only">
+                  {done ? " complete" : index === currentLoopStep ? " current" : " pending"}
+                </span>
               </span>
             ))}
           </div>
@@ -341,7 +452,9 @@ export default function App() {
                     <p className="kicker">Step 01</p>
                     <h2 id="prediction-title">Commit your prediction</h2>
                   </div>
-                  <span className="instrument__status">Required</span>
+                  <span className="instrument__status">
+                    {predictionId ? "Committed" : "Required"}
+                  </span>
                 </div>
                 <PredictionPanel
                   choices={content.predictions}
@@ -354,8 +467,6 @@ export default function App() {
                 />
               </section>
 
-              <SourcePanel label={sourceVariant.label} source={sourceVariant.source} />
-
               <section className="instrument run-panel" aria-labelledby="run-title">
                 <div className="instrument__head">
                   <div>
@@ -363,7 +474,7 @@ export default function App() {
                     <h2 id="run-title">Execute the sequence</h2>
                   </div>
                   <span className={running ? "instrument__status is-running" : "instrument__status"}>
-                    {running ? "Running" : "Armed"}
+                    {runStatus}
                   </span>
                 </div>
                 <HarnessViewport run={activeRun} />
@@ -376,7 +487,7 @@ export default function App() {
                   >
                     Run bug sequence
                   </button>
-                  <button className="button button--quiet" type="button" disabled={running} onClick={resetAttempt}>
+                  <button className="button button--quiet" type="button" onClick={resetAttempt}>
                     Reset
                   </button>
                 </div>
@@ -384,11 +495,15 @@ export default function App() {
                 {runtimeError ? <p className="runtime-error" role="alert">{runtimeError}</p> : null}
               </section>
 
+              <SourcePanel label={sourceVariant.label} source={sourceVariant.source} />
+
               {stage === "repair" || repairId || stage === "proved" ? (
                 <RepairPanel
                   choices={content.repairs}
                   disabled={running}
+                  headingRef={repairHeadingRef}
                   selectedId={repairId}
+                  verified={stage === "proved"}
                   onSelect={chooseRepair}
                   onRun={() => {
                     if (selectedRepair) startVariant(selectedRepair.variantId);
@@ -399,7 +514,14 @@ export default function App() {
 
             <div className="workbench__right">
               <EventTimeline events={events} running={running} />
-              <CoachPanel events={events} />
+              <CoachPanel
+                actualBugOutcome={content.actualBugOutcome}
+                events={events}
+                executedVariantLabel={sourceVariant.label}
+                predictionCorrect={predictionCorrect}
+                predictionLabel={selectedPrediction?.label ?? null}
+                verdictRef={verdictRef}
+              />
             </div>
           </div>
         </main>

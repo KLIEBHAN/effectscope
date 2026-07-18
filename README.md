@@ -40,8 +40,8 @@ Run every local check:
 npm run check
 ```
 
-Chromium E2E support is configured and will become part of CI after the primary
-diagnosis flow exists:
+Chromium E2E covers both diagnosis loops, distractors, cancellation, scenario
+switching, and mobile overflow. CI runs it after unit and build checks:
 
 ```bash
 npx playwright install chromium

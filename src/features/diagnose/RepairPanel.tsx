@@ -1,9 +1,12 @@
+import type { RefObject } from "react";
 import type { RepairChoice } from "../../app/scenarioContent";
 
 type RepairPanelProps = {
   choices: readonly RepairChoice[];
   disabled: boolean;
+  headingRef: RefObject<HTMLHeadingElement | null>;
   selectedId: string | null;
+  verified: boolean;
   onSelect: (choice: RepairChoice) => void;
   onRun: () => void;
 };
@@ -11,7 +14,9 @@ type RepairPanelProps = {
 export function RepairPanel({
   choices,
   disabled,
+  headingRef,
   selectedId,
+  verified,
   onSelect,
   onRun,
 }: RepairPanelProps) {
@@ -20,9 +25,9 @@ export function RepairPanel({
       <div className="instrument__head">
         <div>
           <p className="kicker">Step 04</p>
-          <h2 id="repair-title">Choose the smallest repair</h2>
+          <h2 id="repair-title" ref={headingRef} tabIndex={-1}>Choose the smallest repair</h2>
         </div>
-        <span className="instrument__status">Hypothesis</span>
+        <span className="instrument__status">{verified ? "Verified" : "Hypothesis"}</span>
       </div>
       <fieldset className="repair-choices" disabled={disabled}>
         <legend>Repair strategy</legend>
@@ -54,7 +59,7 @@ export function RepairPanel({
         disabled={!selectedId || disabled}
         onClick={onRun}
       >
-        Test selected repair
+        {verified ? "Retest verified repair" : "Test selected repair"}
       </button>
     </section>
   );

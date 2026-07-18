@@ -212,3 +212,43 @@ npm run test   -> 9 files, 53 tests passed
 npm run build  -> passed
 git diff --check -> passed
 ```
+
+Initial three-way GPT-5.6 Sol xhigh review verdict: FAIL. Review tasks:
+`/root/m2_functional_react`, `/root/m2_ux_accessibility`, and
+`/root/m2_tests_performance`. Reviewers found deadline-driven orchestration that
+could finalize before React commits under timer throttling, disabled in-flight
+reset, source-preview/runtime mismatch, incomplete prediction feedback, false
+status labels, hidden terminal events, mobile loop clipping, low custom-control
+contrast, missing dynamic focus/live-region semantics, and no executed browser
+tests in CI.
+
+Remediation:
+
+- Replaced absolute finish deadlines with trace-causal orchestration. Fetch Race
+  advances after request start and finalizes only once request lifecycles decide
+  the invariant. Missing Cleanup unmounts after the initial tick, remounts after
+  committed unmount evidence, and finalizes after replacement work.
+- Added synchronous commit boundaries only at controlled interaction transitions,
+  preventing coalesced/throttled timers from overtaking React commits.
+- Enabled in-flight reset, kept candidate repairs separate from executed source,
+  and derived terminal, progress, run, repair, and model statuses from actual state.
+- Added prediction-versus-observation feedback that remains visible after repair
+  proof, timeline auto-follow, permanent atomic status announcements, log semantics,
+  terminal focus management, truthful historical progress, and verified repair UI.
+- Reordered mobile flow to Prediction, Run, Source; fitted all five learning-loop
+  steps without horizontal scrolling; raised control-border contrast; improved
+  disabled-primary and source-label affordances.
+- Added coalesced-timer, mid-run reset, scenario-switch, distractor, pending-source,
+  prediction, focus, and status component coverage. Added five real Chromium E2E
+  flows and made Playwright part of GitHub Actions.
+
+Remediation verification before re-review:
+
+```text
+npm run lint   -> passed with no warnings
+npm run test   -> 9 files, 57 tests passed
+npm run build  -> passed
+npm run test:e2e -> 5 Chromium tests passed
+git diff --check -> passed
+mobile width   -> 390 px document in 390 px viewport
+```

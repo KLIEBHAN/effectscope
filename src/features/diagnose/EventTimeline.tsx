@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { TraceEvent, TraceEventKind } from "../../domain/trace";
 
 type EventTimelineProps = {
@@ -24,6 +25,14 @@ function eventLabel(kind: TraceEventKind): string {
 
 export function EventTimeline({ events, running }: EventTimelineProps) {
   const start = events[0]?.atMs ?? 0;
+  const timelineRef = useRef<HTMLOListElement>(null);
+
+  useEffect(() => {
+    const timeline = timelineRef.current;
+    if (timeline) {
+      timeline.scrollTop = timeline.scrollHeight;
+    }
+  }, [events.length]);
 
   return (
     <section className="instrument timeline-panel" aria-labelledby="timeline-title">
@@ -40,10 +49,16 @@ export function EventTimeline({ events, running }: EventTimelineProps) {
       {events.length === 0 ? (
         <div className="scope-empty">
           <span className="scope-empty__beam" aria-hidden />
-          <p>Trace armed. Submit a prediction, then run the component.</p>
+          <p>Trace armed. Select a prediction, then run the component.</p>
         </div>
       ) : (
-        <ol className="timeline" aria-live="polite" aria-label="Runtime events">
+        <ol
+          className="timeline"
+          aria-busy={running}
+          aria-label="Runtime events"
+          ref={timelineRef}
+          role="log"
+        >
           {events.map((event) => {
             const group = eventGroup[event.kind] ?? "default";
             return (

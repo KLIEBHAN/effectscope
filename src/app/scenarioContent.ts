@@ -1,5 +1,5 @@
 import type { ScenarioId } from "../domain/trace";
-import type { ScenarioVariantId } from "../scenarios/registry";
+import type { ScenarioVariantMap } from "../scenarios/registry";
 
 export type Choice = {
   id: string;
@@ -7,13 +7,13 @@ export type Choice = {
   detail: string;
 };
 
-export type RepairChoice = Choice & {
-  variantId: ScenarioVariantId;
+export type RepairChoice<Id extends ScenarioId = ScenarioId> = Choice & {
+  variantId: ScenarioVariantMap[Id];
   correct: boolean;
 };
 
-export type ScenarioContent = {
-  id: ScenarioId;
+export type ScenarioContent<Id extends ScenarioId> = {
+  id: Id;
   number: string;
   title: string;
   shortTitle: string;
@@ -22,11 +22,15 @@ export type ScenarioContent = {
   invariant: string;
   interaction: string;
   predictions: readonly Choice[];
-  repairs: readonly RepairChoice[];
-  bugVariantId: ScenarioVariantId;
+  repairs: readonly RepairChoice<Id>[];
+  bugVariantId: ScenarioVariantMap[Id];
+  correctPredictionId: string;
+  actualBugOutcome: string;
 };
 
-export const scenarioContent: Record<ScenarioId, ScenarioContent> = {
+export const scenarioContent: {
+  readonly [Id in ScenarioId]: ScenarioContent<Id>;
+} = {
   "fetch-race": {
     id: "fetch-race",
     number: "01",
@@ -71,6 +75,8 @@ export const scenarioContent: Record<ScenarioId, ScenarioContent> = {
       },
     ],
     bugVariantId: "fetch-race/bug-v1",
+    correctPredictionId: "stale-overwrite",
+    actualBugOutcome: "Todo C appears first. The slower Todo B response then overwrites it.",
   },
   "missing-cleanup": {
     id: "missing-cleanup",
@@ -116,5 +122,7 @@ export const scenarioContent: Record<ScenarioId, ScenarioContent> = {
       },
     ],
     bugVariantId: "missing-cleanup/bug-v1",
+    correctPredictionId: "two-timers",
+    actualBugOutcome: "The old interval survives unmount and ticks beside the replacement timer.",
   },
 };
