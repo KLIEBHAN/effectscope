@@ -1,24 +1,33 @@
 :root {
-  --ink: oklch(0.18 0.025 165);
-  --ink-2: oklch(0.22 0.028 165);
-  --ink-3: oklch(0.28 0.03 165);
-  --panel: oklch(0.24 0.03 165 / 0.85);
-  --line: oklch(0.42 0.04 165);
-  --muted: oklch(0.72 0.03 165);
-  --text: oklch(0.93 0.015 95);
-  --text-dim: oklch(0.78 0.02 95);
-  --accent: oklch(0.88 0.18 130);
-  --accent-dim: oklch(0.88 0.18 130 / 0.15);
-  --warn: oklch(0.82 0.14 70);
-  --danger: oklch(0.72 0.16 25);
-  --info: oklch(0.78 0.1 220);
-  --cleanup: oklch(0.78 0.12 310);
-  --radius: 12px;
+  --ink: #0b100f;
+  --ink-2: #111817;
+  --ink-3: #1a2422;
+  --panel: #141c1b;
+  --panel-deep: #0f1615;
+  --line: #2a3936;
+  --line-soft: #202e2b;
+  --line-bright: #465b56;
+  --muted: #82938f;
+  --text: #edf3eb;
+  --text-dim: #b8c4c0;
+  --accent: #b9f65d;
+  --accent-strong: #cbff7e;
+  --accent-dim: rgb(185 246 93 / 0.08);
+  --warn: #f4b860;
+  --danger: #ff6b5f;
+  --info: #76c9e8;
+  --cleanup: #cf8df5;
+  --focus: #f5ffde;
+  --code: #d7e7d9;
+  --code-bg: #0b1110;
+  --scope-bg: #0b1210;
+  --scope-grid: rgb(185 246 93 / 0.055);
   --font-display: "Bricolage Grotesque", system-ui, sans-serif;
   --font-body: "IBM Plex Sans", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-  --shadow: 0 20px 50px oklch(0.1 0.02 165 / 0.45);
   color-scheme: dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
 }
 
 *,
@@ -28,39 +37,35 @@
 }
 
 html {
+  min-width: 320px;
   scroll-behavior: smooth;
 }
 
 body {
-  margin: 0;
+  min-width: 320px;
   min-height: 100vh;
-  font-family: var(--font-body);
-  font-size: 16px;
-  line-height: 1.55;
+  margin: 0;
   color: var(--text);
   background:
-    radial-gradient(ellipse 80% 50% at 10% -10%, oklch(0.35 0.06 165 / 0.45), transparent),
-    radial-gradient(ellipse 60% 40% at 100% 0%, oklch(0.4 0.1 130 / 0.18), transparent),
-    linear-gradient(165deg, var(--ink) 0%, oklch(0.14 0.02 165) 100%);
-  background-attachment: fixed;
+    linear-gradient(rgb(185 246 93 / 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(185 246 93 / 0.018) 1px, transparent 1px),
+    var(--ink);
+  background-size: 48px 48px;
+  font: 400 16px/1.55 var(--font-body);
 }
 
 body::before {
   content: "";
   position: fixed;
   inset: 0;
+  z-index: -1;
   pointer-events: none;
-  opacity: 0.035;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  z-index: 9999;
-}
-
-#root {
-  min-height: 100vh;
+  background: radial-gradient(circle at 72% -20%, rgb(84 151 129 / 0.15), transparent 40%);
 }
 
 button,
 input,
+textarea,
 select {
   font: inherit;
 }
@@ -69,12 +74,19 @@ button {
   cursor: pointer;
 }
 
+button:focus-visible,
+a:focus-visible,
+pre:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
 code,
 pre {
   font-family: var(--font-mono);
 }
 
 ::selection {
-  background: var(--accent);
   color: var(--ink);
+  background: var(--accent);
 }

@@ -183,3 +183,32 @@ delta to the current large clock value. Shared checked time addition now require
 both finiteness and strict forward progress for positive durations, initial due
 times, and interval rescheduling. Non-progressing tasks are rejected or removed
 before callback execution.
+
+Final Milestone 1a verdict: PASS from all three GPT-5.6 Sol xhigh reviewers at
+`7a17452`. No P0, P1, or P2 findings remained. Reviewers independently reran
+React lifecycle adversarial cases, domain-contract repros, all six Golden Oracles,
+scheduler extremes, lint, tests, build, and diff checks.
+
+## 2026-07-18 — Milestone 2: diagnosis workspace
+
+- Replaced imported lesson navigation with focused two-scenario product flow.
+- Added mandatory prediction gate, checked-in source view, actual browser-timed
+  React execution, live normalized timeline, deterministic verdict, repair
+  selection, distractor execution, and fixed-run proof.
+- Added atomic browser runners for Fetch Race and Missing Cleanup. Scenario
+  controls dispose old runs before switch/reset and preserve completed proofs.
+- Added responsive instrument-lab visual system with visible keyboard focus,
+  semantic radio groups, progressbar, live trace region, reduced-motion behavior,
+  and mobile layout.
+- Added full component tests for both mandatory learning loops, including bug
+  verdict and successful repair.
+- Rendered and visually inspected full-page desktop and 390 px mobile captures.
+
+Pre-review verification:
+
+```text
+npm run lint   -> passed with no warnings
+npm run test   -> 9 files, 53 tests passed
+npm run build  -> passed
+git diff --check -> passed
+```
