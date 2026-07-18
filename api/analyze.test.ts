@@ -10,7 +10,7 @@ import {
 } from "../src/test/analysisFixture";
 import endpoint, { buildModelContext, createAnalyzeHandler } from "./analyze";
 
-function request(body: unknown, headers?: HeadersInit) {
+function request(body: unknown, headers?: HeadersInit, signal?: AbortSignal) {
   return new Request("https://effectscope.test/api/analyze", {
     method: "POST",
     headers: {
@@ -19,6 +19,7 @@ function request(body: unknown, headers?: HeadersInit) {
       ...headers,
     },
     body: JSON.stringify(body),
+    signal,
   });
 }
 
@@ -176,6 +177,28 @@ describe("POST /api/analyze", () => {
     expect(await response.json()).toEqual({
       error: "Model coaching timed out. Deterministic evidence remains available.",
     });
+  });
+
+  it("propagates client cancellation to the upstream model call", async () => {
+    const controller = new AbortController();
+    let upstreamSignal: AbortSignal | undefined;
+    const generate = vi.fn(
+      (_input, signal: AbortSignal) =>
+        new Promise<never>((_resolve, reject) => {
+          upstreamSignal = signal;
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+        }),
+    );
+    const pending = createAnalyzeHandler({ generate })(
+      request(makeFetchBugRequest(), undefined, controller.signal),
+    );
+    await vi.waitFor(() => expect(generate).toHaveBeenCalledOnce());
+
+    controller.abort();
+    const response = await pending;
+
+    expect(upstreamSignal?.aborted).toBe(true);
+    expect(response.status).toBe(504);
   });
 
   it("falls back safely when no server API key is configured", async () => {

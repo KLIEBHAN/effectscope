@@ -37,9 +37,19 @@ export function CoachPanel({
   );
   const passed = terminal?.kind === "invariant_pass";
   const failed = terminal?.kind === "invariant_fail";
+  const modelAnnouncement = modelState.status === "loading"
+    ? "GPT-5.6 coaching in progress."
+    : modelState.status === "success"
+      ? `GPT-5.6 coaching ready. Learning assessment: ${modelState.response.feedback.verdict.replaceAll("_", " ")}.`
+      : modelState.status === "error"
+        ? `GPT-5.6 coaching failed. ${modelState.message}`
+        : "GPT-5.6 coaching is optional.";
 
   return (
     <section className="instrument coach-panel" aria-labelledby="coach-title">
+      <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {modelAnnouncement}
+      </p>
       <div className="instrument__head">
         <div>
           <p className="kicker">Step 03 · Observe &amp; explain</p>
@@ -132,7 +142,7 @@ export function CoachPanel({
                 </button>
               </div>
             ) : modelState.status === "loading" ? (
-              <p className="model-coach__status" role="status">GPT-5.6 is grounding feedback in this trace…</p>
+              <p className="model-coach__status">GPT-5.6 is grounding feedback in this trace…</p>
             ) : (
               <div>
                 {modelState.status === "error" ? (

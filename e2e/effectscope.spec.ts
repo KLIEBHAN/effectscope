@@ -173,6 +173,9 @@ test("GPT-5.6 coaching cites and focuses validated runtime evidence", async ({ p
   await page.getByRole("button", { name: "Ask GPT-5.6 coach" }).click();
 
   await expect(page.getByText(/response arrival order as independent/i)).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: "GPT-5.6 coaching ready" }),
+  ).toContainText("Learning assessment: correct");
   const evidence = page.locator(".model-evidence button");
   await evidence.click();
   const highlighted = page.locator(".timeline__event.is-highlighted");

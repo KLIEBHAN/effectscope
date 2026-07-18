@@ -240,7 +240,10 @@ export function createAnalyzeHandler({
         { "retry-after": "60" },
       );
     }
-    const signal = AbortSignal.timeout(10_000);
+    const signal = AbortSignal.any([
+      request.signal,
+      AbortSignal.timeout(10_000),
+    ]);
     try {
       const generated = await generate(parsed.data, signal);
       const feedback = validateFeedbackEvidence(
