@@ -1,0 +1,80 @@
+:root {
+  --ink: oklch(0.18 0.025 165);
+  --ink-2: oklch(0.22 0.028 165);
+  --ink-3: oklch(0.28 0.03 165);
+  --panel: oklch(0.24 0.03 165 / 0.85);
+  --line: oklch(0.42 0.04 165);
+  --muted: oklch(0.72 0.03 165);
+  --text: oklch(0.93 0.015 95);
+  --text-dim: oklch(0.78 0.02 95);
+  --accent: oklch(0.88 0.18 130);
+  --accent-dim: oklch(0.88 0.18 130 / 0.15);
+  --warn: oklch(0.82 0.14 70);
+  --danger: oklch(0.72 0.16 25);
+  --info: oklch(0.78 0.1 220);
+  --cleanup: oklch(0.78 0.12 310);
+  --radius: 12px;
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --shadow: 0 20px 50px oklch(0.1 0.02 165 / 0.45);
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--text);
+  background:
+    radial-gradient(ellipse 80% 50% at 10% -10%, oklch(0.35 0.06 165 / 0.45), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, oklch(0.4 0.1 130 / 0.18), transparent),
+    linear-gradient(165deg, var(--ink) 0%, oklch(0.14 0.02 165) 100%);
+  background-attachment: fixed;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  z-index: 9999;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+code,
+pre {
+  font-family: var(--font-mono);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--ink);
+}

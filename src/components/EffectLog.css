@@ -1,0 +1,116 @@
+.effect-log {
+  display: flex;
+  flex-direction: column;
+  min-height: 280px;
+  background: oklch(0.16 0.02 165 / 0.9);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.effect-log__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--line);
+  background: oklch(0.2 0.025 165);
+}
+
+.effect-log__head h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.effect-log__head p {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.effect-log__list {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem;
+  overflow-y: auto;
+  flex: 1;
+  max-height: 320px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.effect-log__empty {
+  padding: 1.5rem 1rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.effect-log__item {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr auto;
+  gap: 0.65rem;
+  align-items: baseline;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  animation: log-in 0.28s ease;
+}
+
+.effect-log__item:nth-child(odd) {
+  background: oklch(1 0 0 / 0.03);
+}
+
+.effect-log__kind {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  font-size: 0.68rem;
+}
+
+.effect-log__item--effect .effect-log__kind {
+  color: var(--accent);
+}
+.effect-log__item--cleanup .effect-log__kind {
+  color: var(--cleanup);
+}
+.effect-log__item--render .effect-log__kind {
+  color: var(--info);
+}
+.effect-log__item--info .effect-log__kind {
+  color: var(--text-dim);
+}
+.effect-log__item--warn .effect-log__kind {
+  color: var(--warn);
+}
+
+.effect-log__msg {
+  color: var(--text);
+}
+
+.effect-log__time {
+  color: var(--muted);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+@keyframes log-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .effect-log__item {
+    grid-template-columns: 4.5rem 1fr;
+  }
+  .effect-log__time {
+    grid-column: 2;
+  }
+}

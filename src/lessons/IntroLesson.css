@@ -1,0 +1,68 @@
+.intro-flow h3 {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display);
+}
+
+.flow-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.flow-steps li {
+  display: grid;
+  grid-template-columns: 2.2rem 1fr;
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.flow-steps li > span {
+  width: 2.2rem;
+  height: 2.2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-weight: 700;
+  border: 1px solid oklch(0.88 0.18 130 / 0.35);
+}
+
+.flow-steps strong {
+  display: block;
+  font-family: var(--font-display);
+  margin-bottom: 0.15rem;
+}
+
+.flow-steps p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.intro-tips ul {
+  margin: 0 0 1rem;
+  padding-left: 1.1rem;
+  color: var(--text-dim);
+}
+
+.intro-tips li {
+  margin-bottom: 0.65rem;
+}
+
+.intro-tips em {
+  color: var(--accent);
+  font-style: normal;
+}
+
+.intro-cta {
+  margin: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+  color: var(--accent);
+  font-weight: 550;
+}

@@ -1,0 +1,31 @@
+.code-block {
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: oklch(0.15 0.02 165);
+}
+
+.code-block figcaption {
+  padding: 0.65rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  background: oklch(0.19 0.025 165);
+}
+
+.code-block pre {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  font-size: 0.82rem;
+  line-height: 1.65;
+  color: oklch(0.88 0.03 130);
+}
+
+.code-block code {
+  white-space: pre;
+}
