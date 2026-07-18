@@ -23,8 +23,8 @@ fabricated.
 
 Immutable imported baseline:
 
-- Commit: `d6ae06e5350c300179388f96ec6b2a44be492292`
-- Tree: `4a782730a6d7452bef232a82128a3a3318300ba7`
+- Commit: `79075f8545d3d98ae0b13ac282e6c4a2893a4be9`
+- Tree: `ce6792e44d1188abb834b8d40c76c5c184748519`
 - Primary Codex task: `019f7444-a17c-7b51-b05e-eff373c05fbd`
 
 ## Verification at capture

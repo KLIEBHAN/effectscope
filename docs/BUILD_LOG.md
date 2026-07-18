@@ -9,7 +9,7 @@ Week. Commit hashes are added after each milestone.
 - Preserved planning artifacts: `PLAN.md` and `REVIEW.md`.
 - Recorded baseline limitations in `BASELINE.md`.
 - Verified imported application with build and lint before implementation.
-- Baseline commit: `d6ae06e5350c300179388f96ec6b2a44be492292`
+- Baseline commit: `79075f8545d3d98ae0b13ac282e6c4a2893a4be9`
 - Capture environment: Node `v25.6.1`, npm `11.15.0`
 - Primary Codex task: `019f7444-a17c-7b51-b05e-eff373c05fbd`
 
@@ -30,7 +30,7 @@ npm run lint
   test stack, CI, Node contract, and evidence detail were incomplete.
 - Remediation: added all missing M0 artifacts before feature implementation.
 
-Remediation commit: `c415ffa`
+Remediation commit: `30c86de`
 
 Post-remediation verification:
 
@@ -185,7 +185,7 @@ times, and interval rescheduling. Non-progressing tasks are rejected or removed
 before callback execution.
 
 Final Milestone 1a verdict: PASS from all three GPT-5.6 Sol xhigh reviewers at
-`7a17452`. No P0, P1, or P2 findings remained. Reviewers independently reran
+`934659a`. No P0, P1, or P2 findings remained. Reviewers independently reran
 React lifecycle adversarial cases, domain-contract repros, all six Golden Oracles,
 scheduler extremes, lint, tests, build, and diff checks.
 
@@ -288,7 +288,7 @@ git diff --check -> passed
 ```
 
 Final Milestone 2 verdict: PASS from all three GPT-5.6 Sol xhigh reviewers at
-`845c431`. No P0, P1, or P2 findings remained. Reviewers independently
+`948d0fd`. No P0, P1, or P2 findings remained. Reviewers independently
 reproduced the 1.6-second Fetch stall, both Missing Cleanup leak paths,
 reset/switch disposal, all repair-state transitions, keyboard focus, terminal
 auto-follow, and 1440/760/390 px layouts. Current evidence: 61 unit/component
@@ -311,7 +311,7 @@ worktree all passed.
 - Added mocked Chromium coaching and fallback flows plus visually inspected
   desktop and mobile captures.
 
-Feature commit: `8dc7d97`
+Feature commit: `6361ffd`
 
 Pre-review verification:
 
@@ -332,7 +332,7 @@ Remediation combined `request.signal` with the server timeout, added an upstream
 cancellation contract test, added a persistent polite live region for loading,
 success, and failure, and asserted the success announcement in Chromium.
 
-Remediation commit: `c1a55be`
+Remediation commit: `53295a6`
 
 Final Milestone 3 verdict: PASS from all three reviewers. No P0, P1, or P2
 findings remained. Post-remediation evidence: 83 tests, ten Chromium E2E flows,
@@ -351,7 +351,7 @@ lint, build, and diff checks passed.
   scenario ownership and evidence focus.
 - Removed the unused Framer Motion runtime and its three transitive packages.
 
-Artifact commit: `b9062c4`
+Artifact commit: `3b478f6`
 
 Fresh-checkout release proof:
 
@@ -377,7 +377,7 @@ listed in `docs/SUBMISSION_CHECKLIST.md`.
 
 ### Final local release review
 
-Three independent GPT-5.6 Sol xhigh tasks reviewed release candidate `900a8a3`:
+Three independent GPT-5.6 Sol xhigh tasks reviewed release candidate `6d3b152`:
 
 - `/root/final_technical`: full runtime, React lifecycle, model boundary,
   accessibility, performance, and adversarial-test review

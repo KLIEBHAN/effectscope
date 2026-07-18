@@ -98,7 +98,7 @@ review evidence lives in the [Build Log](./docs/BUILD_LOG.md).
 
 ### Build Week delta
 
-- Imported baseline: commit `d6ae06e`
+- Imported baseline: commit `79075f8`
 - New work: trace domain, two actual React scenario harnesses, six source
   variants, deterministic Oracles, diagnosis workspace, GPT-5.6 coach boundary,
   80+ unit/contract tests, and Chromium E2E suite
