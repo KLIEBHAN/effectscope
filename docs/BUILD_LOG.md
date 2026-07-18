@@ -64,3 +64,24 @@ to 22.13, constrained `package.json` to supported Node ranges, aligned
 
 Each milestone requires independent GPT-5.6 Sol xhigh reviews before the next
 major implementation step.
+
+## 2026-07-18 — Milestone 1: trace domain and React harnesses
+
+- Added immutable trace events with stable sequence IDs and terminal invariant
+  events.
+- Added browser and manual schedulers; tests control time without replacing
+  React's effect lifecycle.
+- Added actual React harnesses for Fetch Race and Missing Cleanup.
+- Added checked-in bug, fix, and distractor source variants for both scenarios.
+- Added pure invariant evaluators plus exact Golden Trace oracles.
+- Added coverage for bug paths, correct repairs, ineffective distractors,
+  scheduler behavior, and trace-session semantics.
+
+Pre-review verification:
+
+```text
+npm run lint   -> passed with no warnings
+npm run test   -> 5 files, 11 tests passed
+npm run build  -> passed
+git diff --check -> passed
+```

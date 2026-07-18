@@ -1,0 +1,28 @@
+export const missingCleanupBugOracle = [
+  "render:instance-1:cycle=0,instanceId=instance-1,mounted=true",
+  "effect_start:effect-instance-1:cycle=0,instanceId=instance-1",
+  "timer_start:timer-instance-1:cycle=0,instanceId=instance-1",
+  "timer_tick:timer-instance-1:cycle=0,instanceId=instance-1,tick=1",
+  "render:instance-1:cycle=0,instanceId=instance-1,mounted=false",
+  "render:instance-2:cycle=1,instanceId=instance-2,mounted=true",
+  "effect_start:effect-instance-2:cycle=1,instanceId=instance-2",
+  "timer_start:timer-instance-2:cycle=1,instanceId=instance-2",
+  "timer_tick:timer-instance-1:cycle=0,instanceId=instance-1,tick=2",
+  "timer_tick:timer-instance-2:cycle=1,instanceId=instance-2,tick=1",
+  "invariant_fail:single-active-timer",
+];
+
+export const missingCleanupFixOracle = [
+  "render:instance-1:cycle=0,instanceId=instance-1,mounted=true",
+  "effect_start:effect-instance-1:cycle=0,instanceId=instance-1",
+  "timer_start:timer-instance-1:cycle=0,instanceId=instance-1",
+  "timer_tick:timer-instance-1:cycle=0,instanceId=instance-1,tick=1",
+  "render:instance-1:cycle=0,instanceId=instance-1,mounted=false",
+  "cleanup:effect-instance-1:cycle=0,instanceId=instance-1",
+  "timer_stop:timer-instance-1:cycle=0,instanceId=instance-1",
+  "render:instance-2:cycle=1,instanceId=instance-2,mounted=true",
+  "effect_start:effect-instance-2:cycle=1,instanceId=instance-2",
+  "timer_start:timer-instance-2:cycle=1,instanceId=instance-2",
+  "timer_tick:timer-instance-2:cycle=1,instanceId=instance-2,tick=1",
+  "invariant_pass:single-active-timer",
+];
