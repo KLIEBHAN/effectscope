@@ -1,35 +1,44 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ScenarioScheduler, ScheduledHandle } from "../../domain/scheduler";
-import type { TraceSession } from "../../domain/trace";
+import type { ScenarioRunner } from "../../domain/scenarioRunner";
+import type { TraceWriter } from "../../domain/trace";
 import {
   missingCleanupVariants,
   type MissingCleanupVariantId,
 } from "./variants";
 
 type MissingCleanupHarnessProps = {
-  /** New run IDs require a fresh scheduler and trace; variant changes start a new run. */
-  runId: string;
+  runner: ScenarioRunner<"missing-cleanup">;
+  mounted: boolean;
+  instanceId: string;
+  cycle: 0 | 1;
+};
+
+type MissingCleanupRunProps = {
   mounted: boolean;
   instanceId: string;
   cycle: 0 | 1;
   variantId: MissingCleanupVariantId;
   scheduler: ScenarioScheduler;
-  trace: TraceSession;
+  trace: TraceWriter;
 };
-
-type MissingCleanupRunProps = Omit<MissingCleanupHarnessProps, "runId">;
 type TimerProbeProps = Omit<MissingCleanupRunProps, "mounted">;
 
 export function MissingCleanupHarness({
-  runId,
-  variantId,
-  ...runProps
+  runner,
+  mounted,
+  instanceId,
+  cycle,
 }: MissingCleanupHarnessProps) {
   return (
     <MissingCleanupRun
-      key={`${runId}:${variantId}`}
-      {...runProps}
-      variantId={variantId}
+      key={runner.runId}
+      mounted={mounted}
+      instanceId={instanceId}
+      cycle={cycle}
+      variantId={runner.variantId}
+      scheduler={runner.scheduler}
+      trace={runner.writer}
     />
   );
 }

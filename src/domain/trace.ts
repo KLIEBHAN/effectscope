@@ -51,9 +51,13 @@ export type InvariantEvaluator = (events: readonly TraceEvent[]) => InvariantSta
 export type TraceSession = {
   emit: (event: TraceEventInput) => TraceEvent | null;
   finalize: () => TraceEvent;
+  cancel: () => void;
   isFinalized: () => boolean;
   snapshot: () => readonly TraceEvent[];
 };
+
+export type TraceWriter = Pick<TraceSession, "emit">;
+export type TraceReader = Pick<TraceSession, "isFinalized" | "snapshot">;
 
 type CreateTraceSessionOptions = {
   runId: string;
@@ -76,9 +80,11 @@ export function createTraceSession({
   onObserverError,
 }: CreateTraceSessionOptions): TraceSession {
   const events: TraceEvent[] = [];
-  let finalized = false;
+  let phase: "active" | "finalized" | "cancelled" = "active";
+  let notifying = false;
 
   const notify = (event: TraceEvent) => {
+    notifying = true;
     try {
       onEvent?.(event);
     } catch (error) {
@@ -87,6 +93,8 @@ export function createTraceSession({
       } catch {
         // Observers cannot alter scenario execution or trace truth.
       }
+    } finally {
+      notifying = false;
     }
   };
 
@@ -108,17 +116,26 @@ export function createTraceSession({
 
   return {
     emit(input) {
+      if (notifying) {
+        throw new Error("Trace observers cannot emit reentrant events.");
+      }
       if (invariantKinds.has(input.kind as TraceEventKind)) {
         throw new Error("Invariant events can only be emitted by TraceSession.finalize().");
       }
-      if (finalized) {
+      if (phase !== "active") {
         return null;
       }
 
       return append(input);
     },
     finalize() {
-      if (finalized) {
+      if (notifying) {
+        throw new Error("Trace observers cannot finalize a run.");
+      }
+      if (phase === "cancelled") {
+        throw new Error("Cannot finalize a cancelled trace.");
+      }
+      if (phase === "finalized") {
         const terminal = events.at(-1);
         if (!terminal || !invariantKinds.has(terminal.kind)) {
           throw new Error("Finalized trace has no terminal invariant event.");
@@ -127,7 +144,7 @@ export function createTraceSession({
       }
 
       const invariant = evaluate(Object.freeze([...events]));
-      finalized = true;
+      phase = "finalized";
       const incomplete = invariant.status === "pending";
 
       return append({
@@ -137,8 +154,13 @@ export function createTraceSession({
         data: incomplete ? { incomplete: true } : undefined,
       });
     },
+    cancel() {
+      if (phase === "active") {
+        phase = "cancelled";
+      }
+    },
     isFinalized() {
-      return finalized;
+      return phase === "finalized";
     },
     snapshot() {
       return Object.freeze([...events]);

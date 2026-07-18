@@ -51,7 +51,7 @@ describe("createTraceSession", () => {
     expect(trace.snapshot()).toEqual([]);
   });
 
-  it("isolates throwing and reentrant observers from trace truth", () => {
+  it("blocks throwing and reentrant observers from changing trace truth", () => {
     let trace: ReturnType<typeof createTraceSession>;
     const observerError = vi.fn();
     const onEvent = vi.fn((event) => {
@@ -69,7 +69,24 @@ describe("createTraceSession", () => {
     });
 
     expect(() => trace.emit({ kind: "render", actor: "root", message: "Root." })).not.toThrow();
-    expect(trace.snapshot().map((event) => event.actor)).toEqual(["root", "nested"]);
+    expect(trace.snapshot().map((event) => event.actor)).toEqual(["root"]);
+    expect(observerError).toHaveBeenCalledOnce();
+  });
+
+  it("blocks an observer from finalizing before its owner disposes resources", () => {
+    let trace: ReturnType<typeof createTraceSession>;
+    const observerError = vi.fn();
+    trace = createTraceSession({
+      runId: "run",
+      now: () => 0,
+      evaluate: () => ({ status: "pass", id: "proof", message: "Proved." }),
+      onEvent: () => trace.finalize(),
+      onObserverError: observerError,
+    });
+
+    trace.emit({ kind: "render", actor: "root", message: "Root." });
+
+    expect(trace.isFinalized()).toBe(false);
     expect(observerError).toHaveBeenCalledOnce();
   });
 

@@ -115,24 +115,41 @@ type TimerState = {
   instanceId: string;
   cycle: number;
   active: boolean;
-  ticked: boolean;
 };
 
 export const evaluateMissingCleanup: InvariantEvaluator = (events) => {
   const id = "single-active-timer";
   const mounted = new Map<string, boolean>();
   const timers = new Map<string, TimerState>();
+  let sawInitialMount = false;
+  let sawInitialUnmount = false;
+  let sawInitialTimer = false;
   let sawRemount = false;
+  let replacementTicked = false;
 
   for (const event of events) {
     if (event.kind === "render") {
       const instanceId = stringData(event, "instanceId");
       const isMounted = event.data?.mounted;
-      if (instanceId && typeof isMounted === "boolean") {
+      const cycle = event.data?.cycle;
+      if (
+        instanceId &&
+        typeof isMounted === "boolean" &&
+        (cycle === 0 || cycle === 1)
+      ) {
         mounted.set(instanceId, isMounted);
-        if (isMounted && event.data?.cycle === 1) {
+        if (cycle === 0) {
+          sawInitialMount ||= isMounted;
+          sawInitialUnmount ||= !isMounted;
+        }
+        if (isMounted && cycle === 1) {
+          if (!sawInitialUnmount) {
+            return fail(id, "Replacement mounted before the initial component unmounted.");
+          }
           sawRemount = true;
         }
+      } else {
+        return fail(id, "Render event contained an invalid timer cycle.");
       }
       continue;
     }
@@ -147,15 +164,22 @@ export const evaluateMissingCleanup: InvariantEvaluator = (events) => {
 
     const instanceId = stringData(event, "instanceId");
     const cycle = event.data?.cycle;
-    if (!instanceId || typeof cycle !== "number") {
+    if (!instanceId || (cycle !== 0 && cycle !== 1)) {
       return fail(id, "Timer lifecycle event omitted its owner or cycle.");
     }
 
     if (event.kind === "timer_start") {
+      if (mounted.get(instanceId) !== true) {
+        return fail(id, `Timer ${event.actor} started outside a mounted component.`);
+      }
       if (timers.has(event.actor)) {
         return fail(id, `Timer ${event.actor} started more than once.`);
       }
-      timers.set(event.actor, { instanceId, cycle, active: true, ticked: false });
+      timers.set(event.actor, { instanceId, cycle, active: true });
+      sawInitialTimer ||= cycle === 0;
+      if ([...timers.values()].filter((timer) => timer.active).length > 1) {
+        return fail(id, "More than one timer was active at the same time.");
+      }
       continue;
     }
 
@@ -175,23 +199,31 @@ export const evaluateMissingCleanup: InvariantEvaluator = (events) => {
     if (!timer.active) {
       return fail(id, `Stopped timer ${event.actor} produced work.`);
     }
-    timer.ticked = true;
-    if (mounted.get(instanceId) === false) {
-      return fail(id, "A timer from an unmounted component kept running.");
-    }
-  }
-
-  if (!sawRemount) {
-    return pending(id, "Waiting for the remounted component.");
+    replacementTicked ||= cycle === 1;
   }
 
   const activeTimers = [...timers.values()].filter((timer) => timer.active);
+  if (activeTimers.some((timer) => mounted.get(timer.instanceId) !== true)) {
+    return fail(id, "A timer from an unmounted component remained active.");
+  }
+  if (!sawInitialMount || !sawInitialTimer || !sawInitialUnmount || !sawRemount) {
+    return pending(id, "Waiting for a complete mount, unmount, and remount cycle.");
+  }
   const oldTimerActive = activeTimers.some((timer) => timer.cycle === 0);
   const replacementTimers = activeTimers.filter((timer) => timer.cycle === 1);
-  const replacementTicked = replacementTimers.some((timer) => timer.ticked);
+  const mountedReplacementExists = [...mounted.entries()].some(
+    ([instanceId, isMounted]) =>
+      isMounted &&
+      [...timers.values()].some(
+        (timer) => timer.cycle === 1 && timer.instanceId === instanceId,
+      ),
+  );
 
-  if (oldTimerActive || replacementTimers.length !== 1) {
-    return fail(id, "Remount did not leave exactly one replacement timer active.");
+  if (oldTimerActive || replacementTimers.length > 1) {
+    return fail(id, "Remount left an invalid set of timers active.");
+  }
+  if (mountedReplacementExists !== (replacementTimers.length === 1)) {
+    return fail(id, "Replacement timer lifecycle does not match component mount state.");
   }
   if (!replacementTicked) {
     return pending(id, "Waiting for the replacement timer to produce work.");

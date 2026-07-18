@@ -7,8 +7,8 @@ import {
 } from "react";
 import { act, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { evaluateFetchRace } from "../../domain/invariant";
-import { createTraceSession, traceSignature } from "../../domain/trace";
+import { createScenarioRunner } from "../../domain/scenarioRunner";
+import { traceSignature } from "../../domain/trace";
 import { ManualScheduler } from "../../test/ManualScheduler";
 import { FetchRaceHarness, type TodoSelection } from "./FetchRaceHarness";
 import {
@@ -27,36 +27,31 @@ afterEach(() => {
   schedulers.length = 0;
 });
 
-function createRun(runId: string) {
+function createRun(runId: string, variantId: FetchRaceVariantId) {
   const scheduler = new ManualScheduler();
   schedulers.push(scheduler);
-  const trace = createTraceSession({
+  const runner = createScenarioRunner({
     runId,
-    now: scheduler.now,
-    evaluate: evaluateFetchRace,
+    scenarioId: "fetch-race",
+    variantId,
+    scheduler,
   });
-  return { scheduler, trace };
+  return { scheduler, trace: runner.trace, runner };
 }
 
 function setup(variantId: FetchRaceVariantId) {
-  const run = createRun(variantId);
+  const run = createRun(variantId, variantId);
   const view = render(
     <FetchRaceHarness
-      runId="run-1"
+      runner={run.runner}
       selected="B"
-      variantId={variantId}
-      scheduler={run.scheduler}
-      trace={run.trace}
     />,
   );
 
   view.rerender(
     <FetchRaceHarness
-      runId="run-1"
+      runner={run.runner}
       selected="C"
-      variantId={variantId}
-      scheduler={run.scheduler}
-      trace={run.trace}
     />,
   );
 
@@ -65,8 +60,7 @@ function setup(variantId: FetchRaceVariantId) {
 
 function complete(run: ReturnType<typeof setup>) {
   act(() => run.scheduler.advanceBy(1_200));
-  run.scheduler.dispose();
-  run.trace.finalize();
+  run.runner.finish();
 }
 
 describe("FetchRaceHarness", () => {
@@ -102,7 +96,8 @@ describe("FetchRaceHarness", () => {
   });
 
   it("guards the layout-to-passive cleanup gap with committed generation", () => {
-    const { scheduler, trace } = createRun("passive-gap");
+    const run = createRun("passive-gap", "fetch-race/fix-abort-v1");
+    const { scheduler, trace } = run;
 
     function GapHarness({ selected }: { selected: TodoSelection }) {
       useLayoutEffect(() => {
@@ -113,11 +108,8 @@ describe("FetchRaceHarness", () => {
 
       return (
         <FetchRaceHarness
-          runId="gap"
+          runner={run.runner}
           selected={selected}
-          variantId="fetch-race/fix-abort-v1"
-          scheduler={scheduler}
-          trace={trace}
         />
       );
     }
@@ -125,8 +117,7 @@ describe("FetchRaceHarness", () => {
     const view = render(<GapHarness selected="B" />);
     view.rerender(<GapHarness selected="C" />);
     act(() => scheduler.advanceBy(200));
-    scheduler.dispose();
-    trace.finalize();
+    run.runner.finish();
 
     expect(view.getByLabelText("Visible todo")).toHaveTextContent("Todo C");
     expect(trace.snapshot()).toContainEqual(
@@ -139,7 +130,8 @@ describe("FetchRaceHarness", () => {
   });
 
   it("invalidates a fixed request during the layout-to-unmount cleanup gap", () => {
-    const { scheduler, trace } = createRun("unmount-gap");
+    const run = createRun("unmount-gap", "fetch-race/fix-abort-v1");
+    const { scheduler, trace } = run;
 
     function GapHarness({ mounted }: { mounted: boolean }) {
       useLayoutEffect(() => {
@@ -150,18 +142,15 @@ describe("FetchRaceHarness", () => {
 
       return mounted ? (
         <FetchRaceHarness
-          runId="gap"
+          runner={run.runner}
           selected="B"
-          variantId="fetch-race/fix-abort-v1"
-          scheduler={scheduler}
-          trace={trace}
         />
       ) : null;
     }
 
     const view = render(<GapHarness mounted />);
     view.rerender(<GapHarness mounted={false} />);
-    scheduler.dispose();
+    run.runner.dispose();
 
     expect(trace.snapshot()).toContainEqual(
       expect.objectContaining({ kind: "response_ignored", actor: "request-B-1" }),
@@ -172,7 +161,8 @@ describe("FetchRaceHarness", () => {
   });
 
   it("does not mutate committed selection during a suspended transition", () => {
-    const { scheduler, trace } = createRun("suspended");
+    const run = createRun("suspended", "fetch-race/bug-v1");
+    const { scheduler, trace } = run;
     const never = new Promise<never>(() => undefined);
 
     function Suspender({ selected }: { selected: TodoSelection }) {
@@ -194,11 +184,8 @@ describe("FetchRaceHarness", () => {
           </button>
           <Suspense fallback={<span>Pending</span>}>
             <FetchRaceHarness
-              runId="suspended"
+              runner={run.runner}
               selected={selected}
-              variantId="fetch-race/bug-v1"
-              scheduler={scheduler}
-              trace={trace}
             />
             <Suspender selected={selected} />
           </Suspense>
@@ -209,7 +196,7 @@ describe("FetchRaceHarness", () => {
     const view = render(<TransitionHarness />);
     fireEvent.click(view.getByRole("button", { name: "Select C" }));
     act(() => scheduler.advanceBy(1_200));
-    scheduler.dispose();
+    run.runner.dispose();
 
     expect(view.getByLabelText("Visible todo")).toHaveTextContent("Todo B");
     expect(trace.snapshot()).toContainEqual(
@@ -221,26 +208,20 @@ describe("FetchRaceHarness", () => {
   });
 
   it("starts a clean trace and visible state for a new run", () => {
-    const first = createRun("first");
+    const first = createRun("first", "fetch-race/fix-abort-v1");
     const view = render(
       <FetchRaceHarness
-        runId="first"
+        runner={first.runner}
         selected="B"
-        variantId="fetch-race/fix-abort-v1"
-        scheduler={first.scheduler}
-        trace={first.trace}
       />,
     );
-    first.scheduler.dispose();
+    first.runner.dispose();
 
-    const second = createRun("second");
+    const second = createRun("second", "fetch-race/fix-abort-v1");
     view.rerender(
       <FetchRaceHarness
-        runId="second"
+        runner={second.runner}
         selected="B"
-        variantId="fetch-race/fix-abort-v1"
-        scheduler={second.scheduler}
-        trace={second.trace}
       />,
     );
 
@@ -255,34 +236,54 @@ describe("FetchRaceHarness", () => {
     );
   });
 
+  it.each([
+    ["fetch-race/bug-v1", "fetch-race/fix-abort-v1", "invariant_pass"],
+    ["fetch-race/fix-abort-v1", "fetch-race/bug-v1", "invariant_fail"],
+  ] as const)(
+    "isolates a %s to %s variant change in a fresh runner",
+    (fromVariant, toVariant, terminalKind) => {
+      const first = createRun("old-run", fromVariant);
+      const view = render(
+        <FetchRaceHarness runner={first.runner} selected="B" />,
+      );
+      first.runner.dispose();
+
+      const second = createRun("new-run", toVariant);
+      view.rerender(<FetchRaceHarness runner={second.runner} selected="B" />);
+      view.rerender(<FetchRaceHarness runner={second.runner} selected="C" />);
+      act(() => second.scheduler.advanceBy(1_200));
+      second.runner.finish();
+
+      expect(() => first.scheduler.advanceBy(1_200)).toThrow(/after disposal/);
+      expect(second.trace.snapshot().at(-1)).toMatchObject({ kind: terminalKind });
+      expect(
+        second.trace.snapshot().filter((event) => event.kind === "async_start"),
+      ).toHaveLength(2);
+    },
+  );
+
   it("keeps fixed request lifecycle valid under development Strict Mode", () => {
-    const { scheduler, trace } = createRun("strict");
+    const run = createRun("strict", "fetch-race/fix-abort-v1");
+    const { scheduler, trace } = run;
     const view = render(
       <StrictMode>
         <FetchRaceHarness
-          runId="strict"
+          runner={run.runner}
           selected="B"
-          variantId="fetch-race/fix-abort-v1"
-          scheduler={scheduler}
-          trace={trace}
         />
       </StrictMode>,
     );
     view.rerender(
       <StrictMode>
         <FetchRaceHarness
-          runId="strict"
+          runner={run.runner}
           selected="C"
-          variantId="fetch-race/fix-abort-v1"
-          scheduler={scheduler}
-          trace={trace}
         />
       </StrictMode>,
     );
 
     act(() => scheduler.advanceBy(1_200));
-    scheduler.dispose();
-    trace.finalize();
+    run.runner.finish();
 
     expect(trace.snapshot().filter((event) => event.kind === "render")).toHaveLength(3);
     expect(trace.snapshot().at(-1)).toMatchObject({ kind: "invariant_pass" });

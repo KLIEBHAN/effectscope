@@ -116,3 +116,33 @@ npm run test   -> 9 files, 32 tests passed
 npm run build  -> passed
 git diff --check -> passed
 ```
+
+First re-review remained FAIL on three boundary cases: variant changes could
+reuse a run, observers could reenter TraceSession, and timer evaluation mishandled
+a second unmount plus the layout-to-passive cleanup gap. Manual scheduler clock
+addition could also overflow.
+
+Second remediation:
+
+- Bound scenario and variant into one immutable `ScenarioRunner`; harnesses now
+  accept that coherent runner instead of independent run, variant, scheduler,
+  and trace props.
+- Split trace reader/writer/finalizer capabilities. Only runner finalizes;
+  observers cannot emit or finalize reentrantly.
+- Separated successful `finish()` from verdict-free `dispose()` for abandoned
+  runs, while both paths terminate scheduled work.
+- Reworked timer evaluation as a complete cycle-0/cycle-1 phase proof. Clean
+  second unmounts pass, active timers owned by unmounted components fail, and a
+  passive-cleanup-gap tick is judged by its eventual matching stop.
+- Added atomic bug/fix runner-switch tests for both scenarios, real React cleanup
+  gap and second-unmount tests, observer-finalize rejection, cancellation tests,
+  incomplete-cycle adversarial cases, and finite-clock overflow protection.
+
+Second-remediation verification:
+
+```text
+npm run lint   -> passed with no warnings
+npm run test   -> 9 files, 44 tests passed
+npm run build  -> passed
+git diff --check -> passed
+```

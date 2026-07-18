@@ -32,6 +32,9 @@ export class ManualScheduler implements ScenarioScheduler {
     this.assertActive();
     assertValidDelay(durationMs, true);
     const target = this.clock + durationMs;
+    if (!Number.isFinite(target)) {
+      throw new Error("Scheduler clock must remain finite.");
+    }
     let iterations = 0;
 
     while (true) {
@@ -77,9 +80,14 @@ export class ManualScheduler implements ScenarioScheduler {
     this.assertActive();
     assertValidDelay(delayMs, intervalMs === null);
 
+    const dueAt = this.clock + delayMs;
+    if (!Number.isFinite(dueAt)) {
+      throw new Error("Scheduled due time must remain finite.");
+    }
+
     const task: ManualTask = {
       id: this.nextId++,
-      dueAt: this.clock + delayMs,
+      dueAt,
       intervalMs,
       run,
       active: true,

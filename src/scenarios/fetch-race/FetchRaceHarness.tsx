@@ -1,20 +1,22 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ScenarioScheduler, ScheduledHandle } from "../../domain/scheduler";
-import type { TraceSession } from "../../domain/trace";
+import type { ScenarioRunner } from "../../domain/scenarioRunner";
+import type { TraceWriter } from "../../domain/trace";
 import { fetchRaceVariants, type FetchRaceVariantId } from "./variants";
 
 export type TodoSelection = "B" | "C";
 
 type FetchRaceHarnessProps = {
-  /** New run IDs require a fresh scheduler and trace; variant changes start a new run. */
-  runId: string;
+  runner: ScenarioRunner<"fetch-race">;
+  selected: TodoSelection;
+};
+
+type FetchRaceProbeProps = {
   selected: TodoSelection;
   variantId: FetchRaceVariantId;
   scheduler: ScenarioScheduler;
-  trace: TraceSession;
+  trace: TraceWriter;
 };
-
-type FetchRaceProbeProps = Omit<FetchRaceHarnessProps, "runId">;
 
 const requestDelay: Record<TodoSelection, number> = {
   B: 1_200,
@@ -22,15 +24,16 @@ const requestDelay: Record<TodoSelection, number> = {
 };
 
 export function FetchRaceHarness({
-  runId,
-  variantId,
-  ...probeProps
+  runner,
+  selected,
 }: FetchRaceHarnessProps) {
   return (
     <FetchRaceProbe
-      key={`${runId}:${variantId}`}
-      {...probeProps}
-      variantId={variantId}
+      key={runner.runId}
+      selected={selected}
+      variantId={runner.variantId}
+      scheduler={runner.scheduler}
+      trace={runner.writer}
     />
   );
 }

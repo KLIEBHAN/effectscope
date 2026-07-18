@@ -40,5 +40,12 @@ describe("ManualScheduler", () => {
     expect(() => scheduler.advanceBy(-1)).toThrow();
     expect(() => scheduler.advanceBy(Number.NaN)).toThrow();
     expect(scheduler.now()).toBe(0);
+
+    scheduler.advanceBy(Number.MAX_VALUE);
+    expect(() => scheduler.advanceBy(Number.MAX_VALUE)).toThrow(/remain finite/);
+    expect(() => scheduler.scheduleTimeout(Number.MAX_VALUE, () => undefined)).toThrow(
+      /remain finite/,
+    );
+    expect(scheduler.now()).toBe(Number.MAX_VALUE);
   });
 });

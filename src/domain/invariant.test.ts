@@ -91,4 +91,61 @@ describe("evaluateMissingCleanup", () => {
 
     expect(result.status).toBe("fail");
   });
+
+  it("requires an observed initial mount, timer, and unmount before remount", () => {
+    const result = evaluateMissingCleanup([
+      event(1, "render", "two", { instanceId: "two", cycle: 1, mounted: true }),
+      event(2, "timer_start", "new", { instanceId: "two", cycle: 1 }),
+      event(3, "timer_tick", "new", { instanceId: "two", cycle: 1 }),
+    ]);
+
+    expect(result.status).not.toBe("pass");
+  });
+
+  it("passes after the replacement timer ticks and then stops on second unmount", () => {
+    const result = evaluateMissingCleanup([
+      event(1, "render", "one", { instanceId: "one", cycle: 0, mounted: true }),
+      event(2, "timer_start", "old", { instanceId: "one", cycle: 0 }),
+      event(3, "timer_tick", "old", { instanceId: "one", cycle: 0 }),
+      event(4, "render", "one", { instanceId: "one", cycle: 0, mounted: false }),
+      event(5, "timer_stop", "old", { instanceId: "one", cycle: 0 }),
+      event(6, "render", "two", { instanceId: "two", cycle: 1, mounted: true }),
+      event(7, "timer_start", "new", { instanceId: "two", cycle: 1 }),
+      event(8, "timer_tick", "new", { instanceId: "two", cycle: 1 }),
+      event(9, "render", "two", { instanceId: "two", cycle: 1, mounted: false }),
+      event(10, "timer_stop", "new", { instanceId: "two", cycle: 1 }),
+    ]);
+
+    expect(result.status).toBe("pass");
+  });
+
+  it("fails if the second unmount leaves its replacement timer active", () => {
+    const result = evaluateMissingCleanup([
+      event(1, "render", "one", { instanceId: "one", cycle: 0, mounted: true }),
+      event(2, "timer_start", "old", { instanceId: "one", cycle: 0 }),
+      event(3, "render", "one", { instanceId: "one", cycle: 0, mounted: false }),
+      event(4, "timer_stop", "old", { instanceId: "one", cycle: 0 }),
+      event(5, "render", "two", { instanceId: "two", cycle: 1, mounted: true }),
+      event(6, "timer_start", "new", { instanceId: "two", cycle: 1 }),
+      event(7, "timer_tick", "new", { instanceId: "two", cycle: 1 }),
+      event(8, "render", "two", { instanceId: "two", cycle: 1, mounted: false }),
+    ]);
+
+    expect(result.status).toBe("fail");
+  });
+
+  it("allows a cleanup-gap tick when that timer subsequently stops", () => {
+    const result = evaluateMissingCleanup([
+      event(1, "render", "one", { instanceId: "one", cycle: 0, mounted: true }),
+      event(2, "timer_start", "old", { instanceId: "one", cycle: 0 }),
+      event(3, "render", "one", { instanceId: "one", cycle: 0, mounted: false }),
+      event(4, "timer_tick", "old", { instanceId: "one", cycle: 0 }),
+      event(5, "timer_stop", "old", { instanceId: "one", cycle: 0 }),
+      event(6, "render", "two", { instanceId: "two", cycle: 1, mounted: true }),
+      event(7, "timer_start", "new", { instanceId: "two", cycle: 1 }),
+      event(8, "timer_tick", "new", { instanceId: "two", cycle: 1 }),
+    ]);
+
+    expect(result.status).toBe("pass");
+  });
 });
