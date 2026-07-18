@@ -50,7 +50,7 @@ Vorhandene Basis:
 - wiederverwendbare Komponenten: `CodeBlock`, `EffectLog`, `LessonLayout`
 - vorhandene Beispiele für Dependencies, Cleanup, Fetch-Races und Endlosschleifen
 - `npm run build` und `npm run lint` bestanden am 18. Juli 2026
-- Quelldateien tragen Zeitstempel vom 16. Juli 2026 und liegen damit im Einreichungszeitraum
+- importierte Dateien tragen Zeitstempel vom 15. und 16. Juli 2026 und liegen damit im Einreichungszeitraum
 
 Aktuelles Nachweisrisiko:
 

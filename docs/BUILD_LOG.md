@@ -50,6 +50,11 @@ Human confirmation received on 2026-07-18 and recorded verbatim in
 `OWNERSHIP.md`. Node and CI versions were pinned, the README's future endpoint
 language was corrected, and reviewer task names were added for traceability.
 
+Third review found one remaining runtime-contract mismatch: `jsdom@29` requires
+Node 22.13+ while the repository pinned 22.12. Remediation raised `.nvmrc` and CI
+to 22.13, constrained `package.json` to supported Node ranges, aligned
+`@types/node` with Node 22, and corrected the plan's imported timestamp summary.
+
 ## Planned implementation milestones
 
 1. React scenario harnesses, trace domain, invariants, and golden tests

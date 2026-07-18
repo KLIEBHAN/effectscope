@@ -10,7 +10,7 @@ in [`BASELINE.md`](./BASELINE.md). New work is tracked in
 
 ## Requirements
 
-- Node.js 22.12 or newer
+- Node.js 22.13–22.x or Node.js 24 and newer
 - npm 11 or compatible
 
 Using nvm:
