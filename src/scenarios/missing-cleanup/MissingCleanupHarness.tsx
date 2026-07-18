@@ -32,7 +32,7 @@ export function MissingCleanupHarness({
 }: MissingCleanupHarnessProps) {
   return (
     <MissingCleanupRun
-      key={runner.runId}
+      key={runner.runKey}
       mounted={mounted}
       instanceId={instanceId}
       cycle={cycle}

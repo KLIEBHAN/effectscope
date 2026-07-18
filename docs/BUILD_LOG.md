@@ -146,3 +146,34 @@ npm run test   -> 9 files, 44 tests passed
 npm run build  -> passed
 git diff --check -> passed
 ```
+
+Second re-review remained FAIL on final adversarial edges: timer lifecycle used
+unordered flags, reused public run IDs could preserve React state, observer
+callbacks could cancel/dispose reentrantly, terminal publication preceded
+scheduler teardown, and interval rescheduling could overflow.
+
+Third remediation:
+
+- Replaced timer flags with monotone, owner-correlated lifecycle phases from
+  initial mount through optional replacement unmount. Strict Mode setup replay
+  remains allowed inside the current phase; impossible ordering and wrong-owner
+  unmounts fail.
+- Added internal opaque `runKey` allocation. Fresh runners remount harness state
+  even when a caller reuses a display run ID.
+- Guarded trace cancellation and runner finish/dispose during observer delivery.
+  Scheduler now terminates before terminal verdict publication, so terminal
+  observers cannot execute hidden work.
+- Removed overflowing interval tasks before callback execution and added clock,
+  due-time, and reschedule overflow coverage.
+- Added reused-ID React reset, terminal-observer, observer-cancel/dispose,
+  wrong-order/wrong-owner lifecycle, and symmetric Missing Cleanup variant-switch
+  tests.
+
+Third-remediation verification:
+
+```text
+npm run lint   -> passed with no warnings
+npm run test   -> 9 files, 51 tests passed
+npm run build  -> passed
+git diff --check -> passed
+```

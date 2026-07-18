@@ -155,6 +155,9 @@ export function createTraceSession({
       });
     },
     cancel() {
+      if (notifying) {
+        throw new Error("Trace observers cannot cancel a run.");
+      }
       if (phase === "active") {
         phase = "cancelled";
       }

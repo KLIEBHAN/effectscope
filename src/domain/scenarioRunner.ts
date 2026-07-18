@@ -14,6 +14,7 @@ import {
 
 export type ScenarioRunner<Id extends ScenarioId = ScenarioId> = Readonly<{
   runId: string;
+  runKey: string;
   scenarioId: Id;
   variantId: ScenarioVariantMap[Id];
   scheduler: ScenarioScheduler;
@@ -37,6 +38,8 @@ const evaluators = {
   "missing-cleanup": evaluateMissingCleanup,
 } as const;
 
+let nextRunKey = 1;
+
 export function createScenarioRunner<Id extends ScenarioId>({
   runId,
   scenarioId,
@@ -49,12 +52,33 @@ export function createScenarioRunner<Id extends ScenarioId>({
     throw new Error(`Variant ${variantId} does not belong to scenario ${scenarioId}.`);
   }
 
+  let observerActive = false;
+  const relayEvent = onEvent
+    ? (event: TraceEvent) => {
+        observerActive = true;
+        try {
+          onEvent(event);
+        } finally {
+          observerActive = false;
+        }
+      }
+    : undefined;
+  const relayObserverError = onObserverError
+    ? (error: unknown) => {
+        observerActive = true;
+        try {
+          onObserverError(error);
+        } finally {
+          observerActive = false;
+        }
+      }
+    : undefined;
   const session = createTraceSession({
     runId,
     now: scheduler.now,
     evaluate: evaluators[scenarioId],
-    onEvent,
-    onObserverError,
+    onEvent: relayEvent,
+    onObserverError: relayObserverError,
   });
   const trace: TraceReader = Object.freeze({
     isFinalized: session.isFinalized,
@@ -63,15 +87,18 @@ export function createScenarioRunner<Id extends ScenarioId>({
   const writer: TraceWriter = Object.freeze({ emit: session.emit });
 
   const finish = () => {
-    try {
-      return session.finalize();
-    } finally {
-      scheduler.dispose();
+    if (observerActive) {
+      throw new Error("Scenario observers cannot finish a run.");
     }
+    scheduler.dispose();
+    return session.finalize();
   };
+
+  const runKey = `effectscope-run-${String(nextRunKey++)}`;
 
   return Object.freeze({
     runId,
+    runKey,
     scenarioId,
     variantId,
     scheduler,
@@ -79,8 +106,11 @@ export function createScenarioRunner<Id extends ScenarioId>({
     writer,
     finish,
     dispose() {
-      scheduler.dispose();
+      if (observerActive) {
+        throw new Error("Scenario observers cannot dispose a run.");
+      }
       session.cancel();
+      scheduler.dispose();
     },
   });
 }

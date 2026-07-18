@@ -90,6 +90,24 @@ describe("createTraceSession", () => {
     expect(observerError).toHaveBeenCalledOnce();
   });
 
+  it("blocks an observer from cancelling the active trace", () => {
+    let trace: ReturnType<typeof createTraceSession>;
+    const observerError = vi.fn();
+    trace = createTraceSession({
+      runId: "run",
+      now: () => 0,
+      evaluate: () => ({ status: "pass", id: "proof", message: "Proved." }),
+      onEvent: () => trace.cancel(),
+      onObserverError: observerError,
+    });
+
+    trace.emit({ kind: "render", actor: "root", message: "Root." });
+    trace.emit({ kind: "effect_start", actor: "effect", message: "Effect." });
+
+    expect(trace.snapshot()).toHaveLength(2);
+    expect(observerError).toHaveBeenCalledTimes(2);
+  });
+
   it("marks an incomplete finalized run as a terminal failure", () => {
     const trace = createTraceSession({
       runId: "run",

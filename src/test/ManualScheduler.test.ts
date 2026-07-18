@@ -48,4 +48,16 @@ describe("ManualScheduler", () => {
     );
     expect(scheduler.now()).toBe(Number.MAX_VALUE);
   });
+
+  it("fails and removes an interval whose reschedule would overflow", () => {
+    const scheduler = new ManualScheduler();
+    const tick = vi.fn();
+    scheduler.scheduleInterval(Number.MAX_VALUE, tick);
+
+    expect(() => scheduler.advanceBy(Number.MAX_VALUE)).toThrow(/remain finite/);
+    expect(tick).not.toHaveBeenCalled();
+    expect(scheduler.now()).toBe(Number.MAX_VALUE);
+    expect(() => scheduler.advanceBy(0)).not.toThrow();
+    expect(tick).not.toHaveBeenCalled();
+  });
 });

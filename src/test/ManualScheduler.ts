@@ -55,7 +55,13 @@ export class ManualScheduler implements ScenarioScheduler {
         next.active = false;
         this.tasks.delete(next.id);
       } else {
-        next.dueAt += next.intervalMs;
+        const nextDueAt = next.dueAt + next.intervalMs;
+        if (!Number.isFinite(nextDueAt)) {
+          next.active = false;
+          this.tasks.delete(next.id);
+          throw new Error("Scheduled interval due time must remain finite.");
+        }
+        next.dueAt = nextDueAt;
       }
 
       next.run();

@@ -3,7 +3,7 @@ import { ManualScheduler } from "../test/ManualScheduler";
 import { createScenarioRunner } from "./scenarioRunner";
 
 describe("createScenarioRunner", () => {
-  it("finalizes truth, disposes scheduled work, and closes the writer", () => {
+  it("disposes scheduled work before publishing terminal truth", () => {
     const scheduler = new ManualScheduler();
     const tick = vi.fn();
     scheduler.scheduleInterval(10, tick);
@@ -29,6 +29,61 @@ describe("createScenarioRunner", () => {
     expect(() => scheduler.advanceBy(10)).toThrow(/after disposal/);
     expect(tick).not.toHaveBeenCalled();
     expect(runner.finish()).toBe(terminal);
+  });
+
+  it("isolates runner operations and scheduled work from observers", () => {
+    const scheduler = new ManualScheduler();
+    const tick = vi.fn();
+    const observerError = vi.fn();
+    scheduler.scheduleInterval(10, tick);
+    let runner: ReturnType<typeof createScenarioRunner<"fetch-race">>;
+    runner = createScenarioRunner({
+      runId: "observed",
+      scenarioId: "fetch-race",
+      variantId: "fetch-race/bug-v1",
+      scheduler,
+      onEvent: (event) => {
+        if (event.kind === "render") {
+          runner.finish();
+        }
+        if (event.kind === "effect_start") {
+          runner.dispose();
+        }
+        if (event.kind === "invariant_fail") {
+          scheduler.advanceBy(10);
+        }
+      },
+      onObserverError: observerError,
+    });
+
+    runner.writer.emit({ kind: "render", actor: "B", message: "B." });
+    runner.writer.emit({ kind: "effect_start", actor: "effect", message: "Effect." });
+    expect(runner.trace.isFinalized()).toBe(false);
+    expect(() => scheduler.scheduleTimeout(1, () => undefined)).not.toThrow();
+
+    runner.finish();
+
+    expect(tick).not.toHaveBeenCalled();
+    expect(observerError).toHaveBeenCalledTimes(3);
+  });
+
+  it("allocates an opaque React key even when callers reuse run IDs", () => {
+    const first = createScenarioRunner({
+      runId: "reused",
+      scenarioId: "fetch-race",
+      variantId: "fetch-race/bug-v1",
+      scheduler: new ManualScheduler(),
+    });
+    const second = createScenarioRunner({
+      runId: "reused",
+      scenarioId: "fetch-race",
+      variantId: "fetch-race/bug-v1",
+      scheduler: new ManualScheduler(),
+    });
+
+    expect(first.runKey).not.toBe(second.runKey);
+    first.dispose();
+    second.dispose();
   });
 
   it("cancels an abandoned run without fabricating an invariant verdict", () => {

@@ -148,4 +148,33 @@ describe("evaluateMissingCleanup", () => {
 
     expect(result.status).toBe("pass");
   });
+
+  it("rejects an initial unmount that occurs before its mount", () => {
+    const result = evaluateMissingCleanup([
+      event(1, "render", "one", { instanceId: "one", cycle: 0, mounted: false }),
+      event(2, "render", "one", { instanceId: "one", cycle: 0, mounted: true }),
+      event(3, "timer_start", "old", { instanceId: "one", cycle: 0 }),
+      event(4, "render", "one", { instanceId: "one", cycle: 0, mounted: false }),
+      event(5, "timer_stop", "old", { instanceId: "one", cycle: 0 }),
+      event(6, "render", "two", { instanceId: "two", cycle: 1, mounted: true }),
+      event(7, "timer_start", "new", { instanceId: "two", cycle: 1 }),
+      event(8, "timer_tick", "new", { instanceId: "two", cycle: 1 }),
+    ]);
+
+    expect(result.status).toBe("fail");
+  });
+
+  it("requires the initial timer owner to provide its own unmount", () => {
+    const result = evaluateMissingCleanup([
+      event(1, "render", "one", { instanceId: "one", cycle: 0, mounted: true }),
+      event(2, "timer_start", "old", { instanceId: "one", cycle: 0 }),
+      event(3, "render", "other", { instanceId: "other", cycle: 0, mounted: false }),
+      event(4, "timer_stop", "old", { instanceId: "one", cycle: 0 }),
+      event(5, "render", "two", { instanceId: "two", cycle: 1, mounted: true }),
+      event(6, "timer_start", "new", { instanceId: "two", cycle: 1 }),
+      event(7, "timer_tick", "new", { instanceId: "two", cycle: 1 }),
+    ]);
+
+    expect(result.status).toBe("fail");
+  });
 });

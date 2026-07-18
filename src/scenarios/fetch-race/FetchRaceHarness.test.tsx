@@ -208,16 +208,18 @@ describe("FetchRaceHarness", () => {
   });
 
   it("starts a clean trace and visible state for a new run", () => {
-    const first = createRun("first", "fetch-race/fix-abort-v1");
+    const first = createRun("reused", "fetch-race/bug-v1");
     const view = render(
       <FetchRaceHarness
         runner={first.runner}
         selected="B"
       />,
     );
+    act(() => first.scheduler.advanceBy(1_200));
+    expect(view.getByLabelText("Visible todo")).toHaveTextContent("Todo B");
     first.runner.dispose();
 
-    const second = createRun("second", "fetch-race/fix-abort-v1");
+    const second = createRun("reused", "fetch-race/fix-abort-v1");
     view.rerender(
       <FetchRaceHarness
         runner={second.runner}
@@ -234,6 +236,7 @@ describe("FetchRaceHarness", () => {
       "data-selection",
       "none",
     );
+    expect(second.runner.runKey).not.toBe(first.runner.runKey);
   });
 
   it.each([

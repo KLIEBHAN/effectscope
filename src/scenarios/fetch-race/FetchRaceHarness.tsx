@@ -29,7 +29,7 @@ export function FetchRaceHarness({
 }: FetchRaceHarnessProps) {
   return (
     <FetchRaceProbe
-      key={runner.runId}
+      key={runner.runKey}
       selected={selected}
       variantId={runner.variantId}
       scheduler={runner.scheduler}

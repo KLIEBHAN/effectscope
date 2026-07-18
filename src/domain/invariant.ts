@@ -113,18 +113,22 @@ export const evaluateFetchRace: InvariantEvaluator = (events) => {
 
 type TimerState = {
   instanceId: string;
-  cycle: number;
+  cycle: 0 | 1;
   active: boolean;
 };
 
 export const evaluateMissingCleanup: InvariantEvaluator = (events) => {
   const id = "single-active-timer";
-  const mounted = new Map<string, boolean>();
   const timers = new Map<string, TimerState>();
-  let sawInitialMount = false;
-  let sawInitialUnmount = false;
+  let phase:
+    | "await_initial_mount"
+    | "initial_mounted"
+    | "initial_unmounted"
+    | "replacement_mounted"
+    | "replacement_unmounted" = "await_initial_mount";
+  let initialInstanceId: string | null = null;
+  let replacementInstanceId: string | null = null;
   let sawInitialTimer = false;
-  let sawRemount = false;
   let replacementTicked = false;
 
   for (const event of events) {
@@ -132,24 +136,47 @@ export const evaluateMissingCleanup: InvariantEvaluator = (events) => {
       const instanceId = stringData(event, "instanceId");
       const isMounted = event.data?.mounted;
       const cycle = event.data?.cycle;
-      if (
-        instanceId &&
-        typeof isMounted === "boolean" &&
-        (cycle === 0 || cycle === 1)
-      ) {
-        mounted.set(instanceId, isMounted);
-        if (cycle === 0) {
-          sawInitialMount ||= isMounted;
-          sawInitialUnmount ||= !isMounted;
-        }
-        if (isMounted && cycle === 1) {
-          if (!sawInitialUnmount) {
-            return fail(id, "Replacement mounted before the initial component unmounted.");
-          }
-          sawRemount = true;
-        }
-      } else {
+      if (!instanceId || typeof isMounted !== "boolean" || (cycle !== 0 && cycle !== 1)) {
         return fail(id, "Render event contained an invalid timer cycle.");
+      }
+
+      if (cycle === 0 && isMounted) {
+        if (phase === "await_initial_mount") {
+          initialInstanceId = instanceId;
+          phase = "initial_mounted";
+        } else if (phase !== "initial_mounted" || instanceId !== initialInstanceId) {
+          return fail(id, "Initial component mounted outside its lifecycle phase.");
+        }
+      } else if (cycle === 0) {
+        if (
+          phase === "initial_mounted" &&
+          instanceId === initialInstanceId &&
+          sawInitialTimer
+        ) {
+          phase = "initial_unmounted";
+        } else if (phase !== "initial_unmounted" || instanceId !== initialInstanceId) {
+          return fail(id, "Initial component unmounted outside its lifecycle phase.");
+        }
+      } else if (isMounted) {
+        if (phase === "initial_unmounted") {
+          replacementInstanceId = instanceId;
+          phase = "replacement_mounted";
+        } else if (
+          phase !== "replacement_mounted" ||
+          instanceId !== replacementInstanceId
+        ) {
+          return fail(id, "Replacement component mounted outside its lifecycle phase.");
+        }
+      } else if (
+        phase === "replacement_mounted" &&
+        instanceId === replacementInstanceId
+      ) {
+        phase = "replacement_unmounted";
+      } else if (
+        phase !== "replacement_unmounted" ||
+        instanceId !== replacementInstanceId
+      ) {
+        return fail(id, "Replacement component unmounted outside its lifecycle phase.");
       }
       continue;
     }
@@ -169,7 +196,9 @@ export const evaluateMissingCleanup: InvariantEvaluator = (events) => {
     }
 
     if (event.kind === "timer_start") {
-      if (mounted.get(instanceId) !== true) {
+      const expectedOwner = cycle === 0 ? initialInstanceId : replacementInstanceId;
+      const expectedPhase = cycle === 0 ? "initial_mounted" : "replacement_mounted";
+      if (phase !== expectedPhase || instanceId !== expectedOwner) {
         return fail(id, `Timer ${event.actor} started outside a mounted component.`);
       }
       if (timers.has(event.actor)) {
@@ -203,26 +232,26 @@ export const evaluateMissingCleanup: InvariantEvaluator = (events) => {
   }
 
   const activeTimers = [...timers.values()].filter((timer) => timer.active);
-  if (activeTimers.some((timer) => mounted.get(timer.instanceId) !== true)) {
+  const activeOwner =
+    phase === "initial_mounted"
+      ? initialInstanceId
+      : phase === "replacement_mounted"
+        ? replacementInstanceId
+        : null;
+  if (activeTimers.some((timer) => timer.instanceId !== activeOwner)) {
     return fail(id, "A timer from an unmounted component remained active.");
   }
-  if (!sawInitialMount || !sawInitialTimer || !sawInitialUnmount || !sawRemount) {
+  if (phase !== "replacement_mounted" && phase !== "replacement_unmounted") {
     return pending(id, "Waiting for a complete mount, unmount, and remount cycle.");
   }
   const oldTimerActive = activeTimers.some((timer) => timer.cycle === 0);
   const replacementTimers = activeTimers.filter((timer) => timer.cycle === 1);
-  const mountedReplacementExists = [...mounted.entries()].some(
-    ([instanceId, isMounted]) =>
-      isMounted &&
-      [...timers.values()].some(
-        (timer) => timer.cycle === 1 && timer.instanceId === instanceId,
-      ),
-  );
 
   if (oldTimerActive || replacementTimers.length > 1) {
     return fail(id, "Remount left an invalid set of timers active.");
   }
-  if (mountedReplacementExists !== (replacementTimers.length === 1)) {
+  const shouldHaveActiveReplacement = phase === "replacement_mounted";
+  if (shouldHaveActiveReplacement !== (replacementTimers.length === 1)) {
     return fail(id, "Replacement timer lifecycle does not match component mount state.");
   }
   if (!replacementTicked) {

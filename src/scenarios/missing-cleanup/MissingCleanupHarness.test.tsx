@@ -304,6 +304,52 @@ describe("MissingCleanupHarness", () => {
     expect(second.trace.snapshot().filter((event) => event.kind === "timer_start")).toHaveLength(2);
   });
 
+  it("isolates a fixed-to-bug change in a fresh runner", () => {
+    const first = createRun("old-run", "missing-cleanup/fix-clear-v1");
+    const view = render(
+      <MissingCleanupHarness
+        runner={first.runner}
+        mounted
+        instanceId="old-instance"
+        cycle={0}
+      />,
+    );
+    first.runner.dispose();
+
+    const second = createRun("new-run", "missing-cleanup/bug-v1");
+    view.rerender(
+      <MissingCleanupHarness
+        runner={second.runner}
+        mounted
+        instanceId="instance-1"
+        cycle={0}
+      />,
+    );
+    act(() => second.scheduler.advanceBy(500));
+    view.rerender(
+      <MissingCleanupHarness
+        runner={second.runner}
+        mounted={false}
+        instanceId="instance-1"
+        cycle={0}
+      />,
+    );
+    view.rerender(
+      <MissingCleanupHarness
+        runner={second.runner}
+        mounted
+        instanceId="instance-2"
+        cycle={1}
+      />,
+    );
+    act(() => second.scheduler.advanceBy(500));
+    second.runner.finish();
+
+    expect(() => first.scheduler.advanceBy(500)).toThrow(/after disposal/);
+    expect(second.trace.snapshot().at(-1)).toMatchObject({ kind: "invariant_fail" });
+    expect(second.trace.snapshot().filter((event) => event.kind === "timer_start")).toHaveLength(2);
+  });
+
   it("keeps fixed timer lifecycle valid under development Strict Mode", () => {
     const run = createRun("strict", "missing-cleanup/fix-clear-v1");
     const { scheduler, trace } = run;
