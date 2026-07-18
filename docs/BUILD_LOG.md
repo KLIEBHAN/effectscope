@@ -25,6 +25,7 @@ npm run lint
 
 - Two independent GPT-5.6 Sol xhigh reviews inspected repository integrity,
   evidence, dependencies, secret hygiene, and plan compliance.
+- Review tasks: `/root/m0_repo_review` and `/root/m0_compliance_review`.
 - Initial verdict: FAIL. Baseline was sound, but product preparation, license,
   test stack, CI, Node contract, and evidence detail were incomplete.
 - Remediation: added all missing M0 artifacts before feature implementation.
@@ -40,6 +41,14 @@ npm run build  -> passed
 npm audit --audit-level=high -> 0 vulnerabilities
 git diff --check -> passed
 ```
+
+Second review verdict: FAIL on one formal blocker. Both reviewers required an
+explicit human ownership and MIT-publication confirmation. No technical P1/P2
+findings remained.
+
+Human confirmation received on 2026-07-18 and recorded verbatim in
+`OWNERSHIP.md`. Node and CI versions were pinned, the README's future endpoint
+language was corrected, and reviewer task names were added for traceability.
 
 ## Planned implementation milestones
 

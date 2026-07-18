@@ -50,9 +50,10 @@ npm run test:e2e
 
 ## OpenAI configuration
 
-The coach endpoint uses the server-side OpenAI SDK and the Responses API with
-Structured Outputs. Copy `.env.example` to `.env.local`, then set
-`OPENAI_API_KEY`. Never expose this value through a `VITE_` variable.
+The planned coach endpoint will use the server-side OpenAI SDK and the Responses
+API with Structured Outputs. After that endpoint lands, copy `.env.example` to
+`.env.local`, then set `OPENAI_API_KEY`. Never expose this value through a
+`VITE_` variable.
 
 Default runtime model: `gpt-5.6-terra`. Override with `OPENAI_MODEL` when needed.
 
@@ -66,5 +67,5 @@ Default runtime model: `gpt-5.6-terra`. Override with `OPENAI_MODEL` when needed
 
 ## License
 
-MIT, subject to the human publication confirmation recorded in
+MIT. Human ownership and publication confirmation is recorded in
 [`OWNERSHIP.md`](./OWNERSHIP.md).

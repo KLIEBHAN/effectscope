@@ -7,15 +7,15 @@ repository and implement EffectScope from the local `useEffect Lab` baseline.
 That instruction authorizes copying and modifying the local files for this
 repository.
 
-## Publication gate
+## Human ownership confirmation
 
-Before publishing or submitting the repository, its human owner must confirm:
+Confirmed by the human workspace owner on 2026-07-18:
 
-- they own the imported baseline or hold sufficient rights to license it;
-- no employer, client, or third party owns any submitted component;
-- bundled assets and dependencies comply with their licenses;
-- the MIT license may be applied to this repository.
+> Ich besitze den importierten useEffect-Lab-Code und verwendete Assets oder
+> verfüge über ausreichende Rechte. Keine Arbeitgeber-, Kunden- oder
+> Drittrechte verhindern Veröffentlichung und Devpost-Einreichung.
+> Veröffentlichung unter MIT ist erlaubt.
 
-Until that human confirmation, implementation and local testing may proceed,
-but public publication remains gated. This document does not fabricate or
-replace legal ownership evidence.
+This confirmation clears the publication gate for the imported baseline and its
+assets. Third-party dependencies remain governed by their own licenses and are
+checked separately before submission.
