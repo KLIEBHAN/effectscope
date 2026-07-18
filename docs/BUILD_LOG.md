@@ -294,3 +294,46 @@ reset/switch disposal, all repair-state transitions, keyboard focus, terminal
 auto-follow, and 1440/760/390 px layouts. Current evidence: 61 unit/component
 tests, seven Chromium E2E flows, lint, build, CI wiring, diff checks, and clean
 worktree all passed.
+
+## 2026-07-18 — Milestone 3: grounded GPT-5.6 coach
+
+- Added strict shared Zod contracts for both scenario attempts and structured
+  coaching output.
+- Added `POST /api/analyze` through the official OpenAI Responses API with
+  GPT-5.6 model-family enforcement, Structured Outputs, server-loaded source,
+  fresh invariant evaluation, evidence-ID validation, `store: false`, bounded
+  retry/timeout/token/body limits, rate limiting, and generic fallback errors.
+- Added explicit browser coaching requests, exact-attempt cache, request abort,
+  structured coach panel, and evidence-to-timeline focus.
+- Added contract tests for forged truth, cross-scenario data, invalid evidence,
+  output schema, body/method/media limits, rate limits, timeout, missing key,
+  model family, and Vercel Web handler signature.
+- Added mocked Chromium coaching and fallback flows plus visually inspected
+  desktop and mobile captures.
+
+Feature commit: `8dc7d97`
+
+Pre-review verification:
+
+```text
+npm run check -> 14 test files, 82 tests passed; lint and build passed
+npm run test:e2e -> 10 Chromium tests passed
+npm audit --audit-level=high -> 0 vulnerabilities
+git diff --check -> passed
+```
+
+Three-way GPT-5.6 Sol xhigh review tasks: `/root/m3_api_security`,
+`/root/m3_openai_contract`, and `/root/m3_ui_e2e`. Security and OpenAI-contract
+reviews passed. UI/E2E review found two P2 gaps: client reset hid late UI output
+but did not propagate cancellation into the server's OpenAI signal, and successful
+asynchronous coaching lacked a persistent screen-reader announcement.
+
+Remediation combined `request.signal` with the server timeout, added an upstream
+cancellation contract test, added a persistent polite live region for loading,
+success, and failure, and asserted the success announcement in Chromium.
+
+Remediation commit: `c1a55be`
+
+Final Milestone 3 verdict: PASS from all three reviewers. No P0, P1, or P2
+findings remained. Post-remediation evidence: 83 tests, ten Chromium E2E flows,
+lint, build, and diff checks passed.

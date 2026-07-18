@@ -187,6 +187,57 @@ test("GPT-5.6 coaching cites and focuses validated runtime evidence", async ({ p
   expect(requestCount).toBe(1);
 });
 
+test("GPT-5.6 coaching accepts the Missing Cleanup runtime trace", async ({ page }) => {
+  let receivedScenario: string | undefined;
+  await page.route("**/api/analyze", async (route) => {
+    const attempt = route.request().postDataJSON() as {
+      scenarioId: string;
+      trace: Array<{ id: string; kind: string }>;
+    };
+    receivedScenario = attempt.scenarioId;
+    const evidenceId = attempt.trace.find(
+      (event) => event.kind === "invariant_fail",
+    )?.id;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        feedback: {
+          verdict: "correct",
+          misconception: "You correctly tracked the timer that survived its component.",
+          evidence: [
+            {
+              eventId: evidenceId,
+              explanation: "The terminal event proves more than one timer remained active.",
+            },
+          ],
+          hint: "Return cleanup from the effect that owns the interval.",
+          transferQuestion: {
+            prompt: "Who owns the interval lifetime?",
+            options: ["The effect instance", "The module"],
+          },
+        },
+        model: "gpt-5.6-terra",
+        requestId: "mock-request-cleanup",
+      }),
+    });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Missing cleanup" }).click();
+  await choose(page, "Old and replacement timers both run");
+  await runBug(page);
+  await page.getByRole("button", { name: "Ask GPT-5.6 coach" }).click();
+
+  await expect(page.getByText(/timer that survived its component/i)).toBeVisible();
+  expect(receivedScenario).toBe("missing-cleanup");
+  await page.locator(".model-evidence button").click();
+  await expect(page.locator(".timeline__event.is-highlighted")).toContainText(
+    "invariant fail",
+    { ignoreCase: true },
+  );
+});
+
 test("model failure leaves deterministic coaching intact", async ({ page }) => {
   await page.route("**/api/analyze", (route) =>
     route.fulfill({
