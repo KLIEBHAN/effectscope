@@ -177,3 +177,9 @@ npm run test   -> 9 files, 51 tests passed
 npm run build  -> passed
 git diff --check -> passed
 ```
+
+Third re-review left one P2: finite IEEE-754 addition could round a positive
+delta to the current large clock value. Shared checked time addition now requires
+both finiteness and strict forward progress for positive durations, initial due
+times, and interval rescheduling. Non-progressing tasks are rejected or removed
+before callback execution.

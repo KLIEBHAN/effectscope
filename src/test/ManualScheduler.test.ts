@@ -43,6 +43,13 @@ describe("ManualScheduler", () => {
 
     scheduler.advanceBy(Number.MAX_VALUE);
     expect(() => scheduler.advanceBy(Number.MAX_VALUE)).toThrow(/remain finite/);
+    expect(() => scheduler.advanceBy(1)).toThrow(/move forward/);
+    expect(() => scheduler.scheduleInterval(1, () => undefined)).toThrow(
+      /move forward/,
+    );
+    expect(() => scheduler.scheduleTimeout(1, () => undefined)).toThrow(
+      /move forward/,
+    );
     expect(() => scheduler.scheduleTimeout(Number.MAX_VALUE, () => undefined)).toThrow(
       /remain finite/,
     );

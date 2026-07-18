@@ -12,6 +12,14 @@ type ManualTask = {
   active: boolean;
 };
 
+function addTime(base: number, delta: number, label: string): number {
+  const result = base + delta;
+  if (!Number.isFinite(result) || (delta > 0 && result <= base)) {
+    throw new Error(`${label} must remain finite and move forward.`);
+  }
+  return result;
+}
+
 export class ManualScheduler implements ScenarioScheduler {
   private clock = 0;
   private nextId = 1;
@@ -31,10 +39,7 @@ export class ManualScheduler implements ScenarioScheduler {
   advanceBy(durationMs: number): void {
     this.assertActive();
     assertValidDelay(durationMs, true);
-    const target = this.clock + durationMs;
-    if (!Number.isFinite(target)) {
-      throw new Error("Scheduler clock must remain finite.");
-    }
+    const target = addTime(this.clock, durationMs, "Scheduler clock");
     let iterations = 0;
 
     while (true) {
@@ -55,11 +60,17 @@ export class ManualScheduler implements ScenarioScheduler {
         next.active = false;
         this.tasks.delete(next.id);
       } else {
-        const nextDueAt = next.dueAt + next.intervalMs;
-        if (!Number.isFinite(nextDueAt)) {
+        let nextDueAt: number;
+        try {
+          nextDueAt = addTime(
+            next.dueAt,
+            next.intervalMs,
+            "Scheduled interval due time",
+          );
+        } catch (error) {
           next.active = false;
           this.tasks.delete(next.id);
-          throw new Error("Scheduled interval due time must remain finite.");
+          throw error;
         }
         next.dueAt = nextDueAt;
       }
@@ -86,10 +97,7 @@ export class ManualScheduler implements ScenarioScheduler {
     this.assertActive();
     assertValidDelay(delayMs, intervalMs === null);
 
-    const dueAt = this.clock + delayMs;
-    if (!Number.isFinite(dueAt)) {
-      throw new Error("Scheduled due time must remain finite.");
-    }
+    const dueAt = addTime(this.clock, delayMs, "Scheduled due time");
 
     const task: ManualTask = {
       id: this.nextId++,
