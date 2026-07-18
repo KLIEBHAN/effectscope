@@ -39,17 +39,17 @@ export default function App() {
     <div className="app">
       <div className="app__glow" aria-hidden />
       <header className="hero">
-        <p className="hero__brand">useEffect Lab</p>
-        <h1>React Effects — sichtbar gemacht</h1>
+        <p className="hero__brand">EffectScope</p>
+        <h1>See what React actually did.</h1>
         <p className="hero__lead">
-          Sieben kurze Stationen. Jede mit Live-Demo, Code und Event-Log — damit du
-          siehst, wann Effects und Cleanups wirklich laufen.
+          Predict an effect, run the component, then inspect every render, cleanup,
+          and async write. The diagnosis workspace is now being instrumented.
         </p>
       </header>
 
       <div className="shell">
-        <nav className="nav" aria-label="Lektionen">
-          <p className="nav__label">Lektionen</p>
+        <nav className="nav" aria-label="Concept lessons">
+          <p className="nav__label">Baseline concepts</p>
           <ol>
             {lessons.map((lesson) => (
               <li key={lesson.id}>
@@ -72,7 +72,7 @@ export default function App() {
         <main className="main">
           <div className="main__meta">
             <span className="main__eyebrow">
-              Lektion {current.number} / {lessons.length.toString().padStart(2, "0")}
+              Lesson {current.number} / {lessons.length.toString().padStart(2, "0")}
             </span>
             <div className="main__nav-btns">
               <button
@@ -81,7 +81,7 @@ export default function App() {
                 disabled={index <= 0}
                 onClick={() => setActive(lessons[index - 1].id)}
               >
-                Zurück
+                Back
               </button>
               <button
                 type="button"
@@ -89,7 +89,7 @@ export default function App() {
                 disabled={index >= lessons.length - 1}
                 onClick={() => setActive(lessons[index + 1].id)}
               >
-                Weiter
+                Next
               </button>
             </div>
           </div>
@@ -110,8 +110,7 @@ export default function App() {
 
       <footer className="footer">
         <p>
-          Gebaut zum Lernen · React {`useEffect`} · Strict Mode erklärt die doppelten
-          Log-Zeilen in der Entwicklung.
+          Instrumented React learning · deterministic evidence before explanation
         </p>
       </footer>
     </div>

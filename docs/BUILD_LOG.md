@@ -9,6 +9,25 @@ Week. Commit hashes are added after each milestone.
 - Preserved planning artifacts: `PLAN.md` and `REVIEW.md`.
 - Recorded baseline limitations in `BASELINE.md`.
 - Verified imported application with build and lint before implementation.
+- Baseline commit: `d6ae06e5350c300179388f96ec6b2a44be492292`
+- Capture environment: Node `v25.6.1`, npm `11.15.0`
+- Primary Codex task: `019f7444-a17c-7b51-b05e-eff373c05fbd`
+
+Commands executed:
+
+```text
+npm ci
+npm run build
+npm run lint
+```
+
+### Milestone 0 review
+
+- Two independent GPT-5.6 Sol xhigh reviews inspected repository integrity,
+  evidence, dependencies, secret hygiene, and plan compliance.
+- Initial verdict: FAIL. Baseline was sound, but product preparation, license,
+  test stack, CI, Node contract, and evidence detail were incomplete.
+- Remediation: added all missing M0 artifacts before feature implementation.
 
 ## Planned implementation milestones
 
