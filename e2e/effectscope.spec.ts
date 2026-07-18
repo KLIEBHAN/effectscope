@@ -24,6 +24,14 @@ test("diagnoses and repairs Fetch Race from prediction to proof", async ({ page 
   await expect(page.getByText("Invariant proved", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Visible todo")).toHaveText("Todo C");
   await expect(page.getByRole("button", { name: "Retest verified repair" })).toBeEnabled();
+
+  await choose(page, "Add a loading indicator");
+  await expect(page.getByText("Hypothesis", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Test selected repair" })).toBeEnabled();
+  await expect(page.locator('.loop-strip [aria-current="step"]')).toContainText("Prove");
+  await expect(page.getByRole("region", { name: "Source under test" })).toContainText(
+    "Abort stale request in cleanup",
+  );
 });
 
 test("diagnoses and repairs Missing Cleanup", async ({ page }) => {
@@ -31,6 +39,8 @@ test("diagnoses and repairs Missing Cleanup", async ({ page }) => {
   await page.getByRole("button", { name: "Missing cleanup" }).click();
   await choose(page, "Old and replacement timers both run");
   await runBug(page);
+  await expect(page.getByText("Component unmounted", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("instance-2 committed as unmounted.", { exact: true })).toHaveCount(0);
 
   await choose(page, "Clear the interval in cleanup");
   await page.getByRole("button", { name: "Test selected repair" }).click();
@@ -101,6 +111,25 @@ test("keyboard execution exposes visible focus at failure and proof", async ({ p
   await expect(verdict).toBeFocused();
   await expect(verdict).toHaveCSS("outline-style", "solid");
   await expect(verdict).toHaveCSS("outline-width", "2px");
+});
+
+test("main-thread stall preserves the controlled C-before-B race", async ({ page }) => {
+  await page.goto("/");
+  await choose(page, "Todo C appears, then B overwrites it");
+  await page.getByRole("button", { name: "Run bug sequence" }).click();
+  await page.evaluate(() => {
+    const end = performance.now() + 1_600;
+    while (performance.now() < end) {
+      // Reproduce background throttling or a long main-thread task.
+    }
+  });
+
+  await expect(page.getByText("Invariant violated", { exact: true })).toBeVisible();
+  const kinds = await page.locator(".timeline__meta strong").allTextContents();
+  expect(kinds.indexOf("state write")).toBeGreaterThan(-1);
+  expect(kinds.indexOf("stale write")).toBeGreaterThan(kinds.indexOf("state write"));
+  await expect(page.getByText("Your prediction matched the observed bug trace.")).toBeVisible();
+  await expect(page.getByLabel("Visible todo")).toHaveText("Todo B");
 });
 
 test("mobile learning loop keeps all five steps in viewport", async ({ page }) => {

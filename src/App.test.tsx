@@ -73,6 +73,16 @@ describe("EffectScope diagnosis workspace", () => {
     expect(screen.getByText("Verified")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retest verified repair" })).toBeEnabled();
     expect(screen.getByText("Invariant proved").closest(".verdict")).toHaveFocus();
+
+    choose(/Add a loading indicator/i);
+    expect(screen.getByText("Hypothesis")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Test selected repair" })).toBeEnabled();
+    expect(screen.getByRole("listitem", { current: "step" })).toHaveTextContent("Prove");
+    expect(
+      within(screen.getByRole("region", { name: "Source under test" })).getByText(
+        "Abort stale request in cleanup",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("runs and proves Missing Cleanup with one coalesced timer advance", async () => {
@@ -86,6 +96,8 @@ describe("EffectScope diagnosis workspace", () => {
 
     expect(screen.getByText("Invariant violated")).toBeInTheDocument();
     expect(screen.getByText("Your prediction matched the observed bug trace.")).toBeInTheDocument();
+    expect(screen.queryByText("Component unmounted")).not.toBeInTheDocument();
+    expect(screen.queryByText("instance-2 committed as unmounted.")).not.toBeInTheDocument();
     choose(/Clear the interval in cleanup/i);
     fireEvent.click(screen.getByRole("button", { name: "Test selected repair" }));
 

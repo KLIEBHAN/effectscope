@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import {
+  derivePredictionFeedback,
+  type PredictionFeedback,
+} from "./app/predictionFeedback";
 import { scenarioContent, type RepairChoice } from "./app/scenarioContent";
 import { evaluateFetchRace, evaluateMissingCleanup } from "./domain/invariant";
 import { createScenarioRunner, type ScenarioRunner } from "./domain/scenarioRunner";
@@ -9,6 +13,7 @@ import { EventTimeline } from "./features/diagnose/EventTimeline";
 import { PredictionPanel } from "./features/diagnose/PredictionPanel";
 import { RepairPanel } from "./features/diagnose/RepairPanel";
 import { SourcePanel } from "./features/diagnose/SourcePanel";
+import { createAlignedRequestScheduler } from "./infrastructure/alignedRequestScheduler";
 import { createBrowserScheduler } from "./infrastructure/browserScheduler";
 import { FetchRaceHarness, type TodoSelection } from "./scenarios/fetch-race/FetchRaceHarness";
 import { fetchRaceVariants } from "./scenarios/fetch-race/variants";
@@ -91,6 +96,7 @@ export default function App() {
     new Set(),
   );
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const [bugObservation, setBugObservation] = useState<PredictionFeedback | null>(null);
   const runnerRef = useRef<ScenarioRunner | null>(null);
   const controlTimers = useRef(new Map<string, number>());
   const eventBuffer = useRef<TraceEvent[]>([]);
@@ -132,9 +138,21 @@ export default function App() {
     controlTimers.current.set(key, timer);
   };
 
-  const recordEvent = (scenarioId: ScenarioId, event: TraceEvent) => {
+  const recordEvent = (
+    scenarioId: ScenarioId,
+    variantId: ScenarioVariantId,
+    event: TraceEvent,
+  ) => {
     eventBuffer.current.push(event);
     setEvents((current) => [...current, event]);
+    if (
+      (event.kind === "invariant_pass" || event.kind === "invariant_fail") &&
+      variantId === scenarioContent[scenarioId].bugVariantId
+    ) {
+      setBugObservation(
+        derivePredictionFeedback(scenarioId, eventBuffer.current),
+      );
+    }
     if (event.kind === "invariant_pass") {
       setCompletedScenarios((current) => new Set(current).add(scenarioId));
       setStage("proved");
@@ -164,6 +182,9 @@ export default function App() {
     eventBuffer.current = [];
     setExecutedVariantId(variantId);
     setStage("running");
+    if (variantId === scenarioContent[activeScenario].bugVariantId) {
+      setBugObservation(null);
+    }
     const runId = `${activeScenario}-${String(++runSequence.current)}`;
 
     if (activeScenario === "fetch-race") {
@@ -175,9 +196,9 @@ export default function App() {
         runId,
         scenarioId: "fetch-race",
         variantId,
-        scheduler: createBrowserScheduler(),
+        scheduler: createAlignedRequestScheduler(),
         onEvent: (event) => {
-          recordEvent("fetch-race", event);
+          recordEvent("fetch-race", variantId, event);
           if (
             event.kind === "async_start" &&
             event.data?.selection === "B"
@@ -212,6 +233,8 @@ export default function App() {
     if (!isScenarioVariantIdFor("missing-cleanup", variantId)) {
       throw new Error("Missing Cleanup received a variant from another scenario.");
     }
+    let initialUnmountRequested = false;
+    let replacementMountRequested = false;
     let runner: ScenarioRunner<"missing-cleanup">;
     runner = createScenarioRunner({
       runId,
@@ -219,12 +242,17 @@ export default function App() {
       variantId,
       scheduler: createBrowserScheduler(),
       onEvent: (event) => {
-        recordEvent("missing-cleanup", event);
+        recordEvent("missing-cleanup", variantId, event);
         if (event.kind === "invariant_pass" || event.kind === "invariant_fail") {
           return;
         }
 
-        if (event.kind === "timer_tick" && event.data?.cycle === 0) {
+        if (
+          event.kind === "timer_tick" &&
+          event.data?.cycle === 0 &&
+          !initialUnmountRequested
+        ) {
+          initialUnmountRequested = true;
           scheduleControl(`${runId}:unmount`, 40, () => {
             if (runnerRef.current !== runner) return;
             flushSync(() => {
@@ -238,8 +266,10 @@ export default function App() {
         if (
           event.kind === "render" &&
           event.data?.cycle === 0 &&
-          event.data.mounted === false
+          event.data.mounted === false &&
+          !replacementMountRequested
         ) {
+          replacementMountRequested = true;
           scheduleControl(`${runId}:remount`, 60, () => {
             if (runnerRef.current !== runner) return;
             flushSync(() => {
@@ -285,6 +315,7 @@ export default function App() {
     setEvents([]);
     setActiveRun(null);
     setRuntimeError(null);
+    setBugObservation(null);
     eventBuffer.current = [];
     setExecutedVariantId(scenarioContent[scenarioId].bugVariantId);
   };
@@ -295,6 +326,7 @@ export default function App() {
     setActiveRun(null);
     setRepairId(null);
     setRuntimeError(null);
+    setBugObservation(null);
     eventBuffer.current = [];
     setExecutedVariantId(scenarioContent[activeScenario].bugVariantId);
     setStage(predictionId ? "ready" : "predict");
@@ -312,7 +344,11 @@ export default function App() {
   );
   const testedRepairFailed =
     stage === "repair" && selectedRepair?.variantId === executedVariantId;
-  const predictionCorrect = predictionId === content.correctPredictionId;
+  const selectedRepairVerified =
+    stage === "proved" && selectedRepair?.variantId === executedVariantId;
+  const predictionCorrect = bugObservation
+    ? predictionId === bugObservation.correctPredictionId
+    : predictionId === content.correctPredictionId;
   const runStatus = running
     ? "Running"
     : stage === "predict"
@@ -332,7 +368,7 @@ export default function App() {
         repairId !== null &&
         !testedRepairFailed,
     },
-    { label: "Prove", done: stage === "proved" },
+    { label: "Prove", done: selectedRepairVerified },
   ];
   const currentLoopStep = loopSteps.findIndex((step) => !step.done);
   const announcement = runtimeError
@@ -511,7 +547,7 @@ export default function App() {
                   headingRef={repairHeadingRef}
                   rejected={testedRepairFailed}
                   selectedId={repairId}
-                  verified={stage === "proved"}
+                  verified={selectedRepairVerified}
                   onSelect={chooseRepair}
                   onRun={() => {
                     if (selectedRepair) startVariant(selectedRepair.variantId);
@@ -523,7 +559,7 @@ export default function App() {
             <div className="workbench__right">
               <EventTimeline events={events} running={running} />
               <CoachPanel
-                actualBugOutcome={content.actualBugOutcome}
+                actualBugOutcome={bugObservation?.actualOutcome ?? content.actualBugOutcome}
                 events={events}
                 executedVariantLabel={sourceVariant.label}
                 predictionCorrect={predictionCorrect}

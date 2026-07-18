@@ -252,3 +252,37 @@ npm run test:e2e -> 5 Chromium tests passed
 git diff --check -> passed
 mobile width   -> 390 px document in 390 px viewport
 ```
+
+First re-review remained FAIL on three cross-state/runtime edges. A long
+main-thread stall could let the slow Fetch B timer expire before fast Fetch C
+was registered, while static coaching still claimed C appeared first. Later
+ticks from the intentionally leaked cycle-0 timer could also schedule a second
+unmount of the replacement component. Finally, selecting a different repair
+after proof retained the prior repair's verified state.
+
+Second remediation:
+
+- Added a Fetch-specific aligned request scheduler. React still starts each
+  effect, but both request countdowns release from one causal epoch; a delayed
+  selection commit cannot invert the controlled fast-C/slow-B outcome.
+- Added trace-derived bug observation storage. Prediction assessment and actual
+  outcome now require the claimed write/tick sequence instead of trusting static
+  scenario copy.
+- Made Missing Cleanup unmount/remount orchestration permanently one-shot per
+  run, so leaked old-timer ticks remain evidence and cannot control UI lifecycle.
+- Bound Verified and Rejected repair states to both selected and executed variant
+  IDs plus terminal stage. New selections after proof return to Hypothesis/Prove;
+  tested distractors return to Rejected/Repair.
+- Added scheduler epoch/cancellation tests, trace-feedback tests, replacement-
+  mount assertions, post-proof alternative selection coverage, and a real
+  Chromium 1.6-second main-thread-stall regression.
+
+Second-remediation verification before re-review:
+
+```text
+npm run lint   -> passed with no warnings
+npm run test   -> 11 files, 61 tests passed
+npm run build  -> passed
+npm run test:e2e -> 7 Chromium tests passed
+git diff --check -> passed
+```
