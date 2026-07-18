@@ -161,8 +161,11 @@ describe("EffectScope diagnosis workspace", () => {
     expect(screen.getByText("Invariant violated")).toBeInTheDocument();
     expect(screen.getByText("Failed")).toBeInTheDocument();
     expect(screen.getByRole("listitem", { current: "step" })).toHaveTextContent("Repair");
+    expect(screen.getByText("Rejected")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Choose another repair" })).toBeDisabled();
 
     choose(/Abort and guard obsolete requests/i);
     expect(screen.getByRole("listitem", { current: "step" })).toHaveTextContent("Prove");
+    expect(screen.getByRole("button", { name: "Test selected repair" })).toBeEnabled();
   });
 });

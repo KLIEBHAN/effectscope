@@ -310,6 +310,8 @@ export default function App() {
   const selectedPrediction = content.predictions.find(
     (choice) => choice.id === predictionId,
   );
+  const testedRepairFailed =
+    stage === "repair" && selectedRepair?.variantId === executedVariantId;
   const predictionCorrect = predictionId === content.correctPredictionId;
   const runStatus = running
     ? "Running"
@@ -328,10 +330,7 @@ export default function App() {
       label: "Repair",
       done:
         repairId !== null &&
-        !(
-          stage === "repair" &&
-          selectedRepair?.variantId === executedVariantId
-        ),
+        !testedRepairFailed,
     },
     { label: "Prove", done: stage === "proved" },
   ];
@@ -510,6 +509,7 @@ export default function App() {
                   choices={content.repairs}
                   disabled={running}
                   headingRef={repairHeadingRef}
+                  rejected={testedRepairFailed}
                   selectedId={repairId}
                   verified={stage === "proved"}
                   onSelect={chooseRepair}

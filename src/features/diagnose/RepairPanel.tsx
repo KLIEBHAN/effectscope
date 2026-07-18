@@ -5,6 +5,7 @@ type RepairPanelProps = {
   choices: readonly RepairChoice[];
   disabled: boolean;
   headingRef: RefObject<HTMLHeadingElement | null>;
+  rejected: boolean;
   selectedId: string | null;
   verified: boolean;
   onSelect: (choice: RepairChoice) => void;
@@ -15,6 +16,7 @@ export function RepairPanel({
   choices,
   disabled,
   headingRef,
+  rejected,
   selectedId,
   verified,
   onSelect,
@@ -27,7 +29,9 @@ export function RepairPanel({
           <p className="kicker">Step 04</p>
           <h2 id="repair-title" ref={headingRef} tabIndex={-1}>Choose the smallest repair</h2>
         </div>
-        <span className="instrument__status">{verified ? "Verified" : "Hypothesis"}</span>
+        <span className="instrument__status">
+          {verified ? "Verified" : rejected ? "Rejected" : "Hypothesis"}
+        </span>
       </div>
       <fieldset className="repair-choices" disabled={disabled}>
         <legend>Repair strategy</legend>
@@ -56,10 +60,14 @@ export function RepairPanel({
       <button
         className="button button--primary button--wide"
         type="button"
-        disabled={!selectedId || disabled}
+        disabled={!selectedId || disabled || rejected}
         onClick={onRun}
       >
-        {verified ? "Retest verified repair" : "Test selected repair"}
+        {verified
+          ? "Retest verified repair"
+          : rejected
+            ? "Choose another repair"
+            : "Test selected repair"}
       </button>
     </section>
   );
